@@ -1,0 +1,81 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "WC Fan",
+        "description": "Bathroom fan driven by the seat lid and the flush.",
+        "data": {
+          "name": "Name",
+          "seat_entity": "Seat lid sensor",
+          "flush_entity": "Flush sensor",
+          "fan_entity": "Fan"
+        },
+        "data_description": {
+          "name": "Prefix of the entity names.",
+          "seat_entity": "Binary sensor: on = lid open.",
+          "flush_entity": "Binary sensor: on = flush in progress.",
+          "fan_entity": "Switch or fan to turn on and off."
+        }
+      }
+    },
+    "error": {
+      "same_entity": "Seat and flush must be two different sensors.",
+      "fan_in_use": "This fan is already driven by another WC Fan instance."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "WC Fan entities",
+        "data": {
+          "seat_entity": "Seat lid sensor",
+          "flush_entity": "Flush sensor",
+          "fan_entity": "Fan"
+        },
+        "data_description": {
+          "seat_entity": "Binary sensor: on = lid open.",
+          "flush_entity": "Binary sensor: on = flush in progress.",
+          "fan_entity": "Switch or fan to turn on and off."
+        }
+      }
+    },
+    "error": {
+      "same_entity": "Seat and flush must be two different sensors.",
+      "fan_in_use": "This fan is already driven by another WC Fan instance."
+    }
+  },
+  "entity": {
+    "number": {
+      "activation_delay": { "name": "Activation delay" },
+      "base_time": { "name": "Base time" },
+      "seat_factor": { "name": "Seat factor" },
+      "seat_cap": { "name": "Seat cap" },
+      "flush_extra": { "name": "Flush extra" },
+      "flush_factor": { "name": "Flush factor" },
+      "min_time": { "name": "Minimum time" },
+      "max_time": { "name": "Maximum time" }
+    },
+    "sensor": {
+      "state": {
+        "name": "State",
+        "state": {
+          "idle": "Idle",
+          "waiting": "Waiting",
+          "active": "Active",
+          "countdown": "Countdown",
+          "manual": "Manual",
+          "disabled": "Disabled"
+        },
+        "state_attributes": {
+          "seat_total": { "name": "Seat open time" },
+          "flush_durations": { "name": "Flush durations" },
+          "post_ventilation": { "name": "Post-ventilation time" }
+        }
+      },
+      "expected_end": { "name": "Expected end" }
+    },
+    "switch": {
+      "enabled": { "name": "Enabled" }
+    }
+  }
+}

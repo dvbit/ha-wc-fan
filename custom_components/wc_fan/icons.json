@@ -1,0 +1,36 @@
+{
+  "entity": {
+    "number": {
+      "activation_delay": { "default": "mdi:timer-sand" },
+      "base_time": { "default": "mdi:timer-outline" },
+      "seat_factor": { "default": "mdi:toilet" },
+      "seat_cap": { "default": "mdi:arrow-collapse-up" },
+      "flush_extra": { "default": "mdi:water-plus" },
+      "flush_factor": { "default": "mdi:water-percent" },
+      "min_time": { "default": "mdi:timer-minus-outline" },
+      "max_time": { "default": "mdi:timer-plus-outline" }
+    },
+    "sensor": {
+      "state": {
+        "default": "mdi:fan",
+        "state": {
+          "idle": "mdi:fan-off",
+          "waiting": "mdi:timer-sand",
+          "active": "mdi:fan",
+          "countdown": "mdi:fan-clock",
+          "manual": "mdi:hand-back-right",
+          "disabled": "mdi:fan-remove"
+        }
+      },
+      "expected_end": { "default": "mdi:clock-end" }
+    },
+    "switch": {
+      "enabled": {
+        "default": "mdi:fan-auto",
+        "state": {
+          "off": "mdi:fan-off"
+        }
+      }
+    }
+  }
+}

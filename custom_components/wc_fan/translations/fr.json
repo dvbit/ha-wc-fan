@@ -1,0 +1,107 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Ventilateur WC",
+        "description": "Ventilateur de salle de bain piloté par l'abattant et la chasse d'eau.",
+        "data": {
+          "name": "Nom",
+          "seat_entity": "Capteur d'abattant",
+          "flush_entity": "Capteur de chasse d'eau",
+          "fan_entity": "Ventilateur"
+        },
+        "data_description": {
+          "name": "Préfixe des noms d'entités.",
+          "seat_entity": "Capteur binaire : on = abattant ouvert.",
+          "flush_entity": "Capteur binaire : on = chasse d'eau en cours.",
+          "fan_entity": "Interrupteur ou ventilateur à allumer et éteindre."
+        }
+      }
+    },
+    "error": {
+      "same_entity": "L'abattant et la chasse d'eau doivent être deux capteurs différents.",
+      "fan_in_use": "Ce ventilateur est déjà piloté par une autre instance de Ventilateur WC."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Entités Ventilateur WC",
+        "data": {
+          "seat_entity": "Capteur d'abattant",
+          "flush_entity": "Capteur de chasse d'eau",
+          "fan_entity": "Ventilateur"
+        },
+        "data_description": {
+          "seat_entity": "Capteur binaire : on = abattant ouvert.",
+          "flush_entity": "Capteur binaire : on = chasse d'eau en cours.",
+          "fan_entity": "Interrupteur ou ventilateur à allumer et éteindre."
+        }
+      }
+    },
+    "error": {
+      "same_entity": "L'abattant et la chasse d'eau doivent être deux capteurs différents.",
+      "fan_in_use": "Ce ventilateur est déjà piloté par une autre instance de Ventilateur WC."
+    }
+  },
+  "entity": {
+    "number": {
+      "activation_delay": {
+        "name": "Délai d'activation"
+      },
+      "base_time": {
+        "name": "Temps de base"
+      },
+      "seat_factor": {
+        "name": "Facteur abattant"
+      },
+      "seat_cap": {
+        "name": "Plafond abattant"
+      },
+      "flush_extra": {
+        "name": "Supplément chasse"
+      },
+      "flush_factor": {
+        "name": "Facteur chasse"
+      },
+      "min_time": {
+        "name": "Temps minimum"
+      },
+      "max_time": {
+        "name": "Temps maximum"
+      }
+    },
+    "sensor": {
+      "state": {
+        "name": "État",
+        "state": {
+          "idle": "Inactif",
+          "waiting": "Attente",
+          "active": "Actif",
+          "countdown": "Compte à rebours",
+          "manual": "Manuel",
+          "disabled": "Désactivé"
+        },
+        "state_attributes": {
+          "seat_total": {
+            "name": "Durée abattant ouvert"
+          },
+          "flush_durations": {
+            "name": "Durées des chasses"
+          },
+          "post_ventilation": {
+            "name": "Durée de post-ventilation"
+          }
+        }
+      },
+      "expected_end": {
+        "name": "Fin prévue"
+      }
+    },
+    "switch": {
+      "enabled": {
+        "name": "Activé"
+      }
+    }
+  }
+}

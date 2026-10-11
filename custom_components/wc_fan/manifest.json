@@ -1,0 +1,13 @@
+{
+  "domain": "wc_fan",
+  "name": "WC Fan",
+  "codeowners": ["@dvbit"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/dvbit/ha-wc-fan",
+  "integration_type": "helper",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/dvbit/ha-wc-fan/issues",
+  "requirements": [],
+  "version": "1.0.0"
+}

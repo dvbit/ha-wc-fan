@@ -1,0 +1,107 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Aeratore WC",
+        "description": "Aeratore del bagno comandato da tavoletta e sciacquone.",
+        "data": {
+          "name": "Nome",
+          "seat_entity": "Sensore tavoletta",
+          "flush_entity": "Sensore sciacquone",
+          "fan_entity": "Aeratore"
+        },
+        "data_description": {
+          "name": "Prefisso dei nomi delle entità.",
+          "seat_entity": "Sensore binario: on = tavoletta aperta.",
+          "flush_entity": "Sensore binario: on = scarico in corso.",
+          "fan_entity": "Switch o ventola da accendere e spegnere."
+        }
+      }
+    },
+    "error": {
+      "same_entity": "Tavoletta e sciacquone devono essere due sensori diversi.",
+      "fan_in_use": "Questo aeratore è già comandato da un'altra istanza di Aeratore WC."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Entità Aeratore WC",
+        "data": {
+          "seat_entity": "Sensore tavoletta",
+          "flush_entity": "Sensore sciacquone",
+          "fan_entity": "Aeratore"
+        },
+        "data_description": {
+          "seat_entity": "Sensore binario: on = tavoletta aperta.",
+          "flush_entity": "Sensore binario: on = scarico in corso.",
+          "fan_entity": "Switch o ventola da accendere e spegnere."
+        }
+      }
+    },
+    "error": {
+      "same_entity": "Tavoletta e sciacquone devono essere due sensori diversi.",
+      "fan_in_use": "Questo aeratore è già comandato da un'altra istanza di Aeratore WC."
+    }
+  },
+  "entity": {
+    "number": {
+      "activation_delay": {
+        "name": "Ritardo attivazione"
+      },
+      "base_time": {
+        "name": "Tempo base"
+      },
+      "seat_factor": {
+        "name": "Fattore tavoletta"
+      },
+      "seat_cap": {
+        "name": "Limite tavoletta"
+      },
+      "flush_extra": {
+        "name": "Extra scarico"
+      },
+      "flush_factor": {
+        "name": "Fattore scarico"
+      },
+      "min_time": {
+        "name": "Tempo minimo"
+      },
+      "max_time": {
+        "name": "Tempo massimo"
+      }
+    },
+    "sensor": {
+      "state": {
+        "name": "Stato",
+        "state": {
+          "idle": "Inattivo",
+          "waiting": "Attesa",
+          "active": "Attivo",
+          "countdown": "Countdown",
+          "manual": "Manuale",
+          "disabled": "Disabilitato"
+        },
+        "state_attributes": {
+          "seat_total": {
+            "name": "Tempo tavoletta aperta"
+          },
+          "flush_durations": {
+            "name": "Durate scarichi"
+          },
+          "post_ventilation": {
+            "name": "Tempo di post-ventilazione"
+          }
+        }
+      },
+      "expected_end": {
+        "name": "Fine prevista"
+      }
+    },
+    "switch": {
+      "enabled": {
+        "name": "Abilitato"
+      }
+    }
+  }
+}

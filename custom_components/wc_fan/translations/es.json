@@ -1,0 +1,107 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Extractor WC",
+        "description": "Extractor del baño controlado por la tapa y la cisterna.",
+        "data": {
+          "name": "Nombre",
+          "seat_entity": "Sensor de tapa",
+          "flush_entity": "Sensor de cisterna",
+          "fan_entity": "Extractor"
+        },
+        "data_description": {
+          "name": "Prefijo de los nombres de las entidades.",
+          "seat_entity": "Sensor binario: on = tapa abierta.",
+          "flush_entity": "Sensor binario: on = descarga en curso.",
+          "fan_entity": "Interruptor o ventilador a encender y apagar."
+        }
+      }
+    },
+    "error": {
+      "same_entity": "La tapa y la cisterna deben ser dos sensores distintos.",
+      "fan_in_use": "Este extractor ya está controlado por otra instancia de Extractor WC."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Entidades Extractor WC",
+        "data": {
+          "seat_entity": "Sensor de tapa",
+          "flush_entity": "Sensor de cisterna",
+          "fan_entity": "Extractor"
+        },
+        "data_description": {
+          "seat_entity": "Sensor binario: on = tapa abierta.",
+          "flush_entity": "Sensor binario: on = descarga en curso.",
+          "fan_entity": "Interruptor o ventilador a encender y apagar."
+        }
+      }
+    },
+    "error": {
+      "same_entity": "La tapa y la cisterna deben ser dos sensores distintos.",
+      "fan_in_use": "Este extractor ya está controlado por otra instancia de Extractor WC."
+    }
+  },
+  "entity": {
+    "number": {
+      "activation_delay": {
+        "name": "Retardo de activación"
+      },
+      "base_time": {
+        "name": "Tiempo base"
+      },
+      "seat_factor": {
+        "name": "Factor tapa"
+      },
+      "seat_cap": {
+        "name": "Límite tapa"
+      },
+      "flush_extra": {
+        "name": "Extra descarga"
+      },
+      "flush_factor": {
+        "name": "Factor descarga"
+      },
+      "min_time": {
+        "name": "Tiempo mínimo"
+      },
+      "max_time": {
+        "name": "Tiempo máximo"
+      }
+    },
+    "sensor": {
+      "state": {
+        "name": "Estado",
+        "state": {
+          "idle": "Inactivo",
+          "waiting": "Espera",
+          "active": "Activo",
+          "countdown": "Cuenta atrás",
+          "manual": "Manual",
+          "disabled": "Desactivado"
+        },
+        "state_attributes": {
+          "seat_total": {
+            "name": "Tiempo tapa abierta"
+          },
+          "flush_durations": {
+            "name": "Duraciones de descarga"
+          },
+          "post_ventilation": {
+            "name": "Tiempo de posventilación"
+          }
+        }
+      },
+      "expected_end": {
+        "name": "Fin previsto"
+      }
+    },
+    "switch": {
+      "enabled": {
+        "name": "Activado"
+      }
+    }
+  }
+}

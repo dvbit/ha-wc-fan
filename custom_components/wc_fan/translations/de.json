@@ -1,0 +1,107 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "WC-Lüfter",
+        "description": "Badlüfter, gesteuert durch Deckel und Spülung.",
+        "data": {
+          "name": "Name",
+          "seat_entity": "Deckelsensor",
+          "flush_entity": "Spülungssensor",
+          "fan_entity": "Lüfter"
+        },
+        "data_description": {
+          "name": "Präfix der Entitätsnamen.",
+          "seat_entity": "Binärsensor: on = Deckel offen.",
+          "flush_entity": "Binärsensor: on = Spülung läuft.",
+          "fan_entity": "Schalter oder Ventilator zum Ein- und Ausschalten."
+        }
+      }
+    },
+    "error": {
+      "same_entity": "Deckel und Spülung müssen zwei verschiedene Sensoren sein.",
+      "fan_in_use": "Dieser Lüfter wird bereits von einer anderen WC-Lüfter-Instanz gesteuert."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "WC-Lüfter-Entitäten",
+        "data": {
+          "seat_entity": "Deckelsensor",
+          "flush_entity": "Spülungssensor",
+          "fan_entity": "Lüfter"
+        },
+        "data_description": {
+          "seat_entity": "Binärsensor: on = Deckel offen.",
+          "flush_entity": "Binärsensor: on = Spülung läuft.",
+          "fan_entity": "Schalter oder Ventilator zum Ein- und Ausschalten."
+        }
+      }
+    },
+    "error": {
+      "same_entity": "Deckel und Spülung müssen zwei verschiedene Sensoren sein.",
+      "fan_in_use": "Dieser Lüfter wird bereits von einer anderen WC-Lüfter-Instanz gesteuert."
+    }
+  },
+  "entity": {
+    "number": {
+      "activation_delay": {
+        "name": "Aktivierungsverzögerung"
+      },
+      "base_time": {
+        "name": "Grundzeit"
+      },
+      "seat_factor": {
+        "name": "Deckelfaktor"
+      },
+      "seat_cap": {
+        "name": "Deckelobergrenze"
+      },
+      "flush_extra": {
+        "name": "Spülungszuschlag"
+      },
+      "flush_factor": {
+        "name": "Spülungsfaktor"
+      },
+      "min_time": {
+        "name": "Mindestzeit"
+      },
+      "max_time": {
+        "name": "Höchstzeit"
+      }
+    },
+    "sensor": {
+      "state": {
+        "name": "Zustand",
+        "state": {
+          "idle": "Ruhe",
+          "waiting": "Wartend",
+          "active": "Aktiv",
+          "countdown": "Countdown",
+          "manual": "Manuell",
+          "disabled": "Deaktiviert"
+        },
+        "state_attributes": {
+          "seat_total": {
+            "name": "Deckel-offen-Zeit"
+          },
+          "flush_durations": {
+            "name": "Spülungsdauern"
+          },
+          "post_ventilation": {
+            "name": "Nachlaufzeit"
+          }
+        }
+      },
+      "expected_end": {
+        "name": "Voraussichtliches Ende"
+      }
+    },
+    "switch": {
+      "enabled": {
+        "name": "Aktiviert"
+      }
+    }
+  }
+}
