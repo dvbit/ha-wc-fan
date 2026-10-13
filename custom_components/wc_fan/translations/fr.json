@@ -3,23 +3,25 @@
     "step": {
       "user": {
         "title": "Ventilateur WC",
-        "description": "Ventilateur de salle de bain piloté par l'abattant et la chasse d'eau.",
+        "description": "Ventilateur de salle de bain piloté par l'abattant et, en option, par la petite et la grande chasse.",
         "data": {
           "name": "Nom",
           "seat_entity": "Capteur d'abattant",
-          "flush_entity": "Capteur de chasse d'eau",
+          "short_flush_entity": "Capteur de petite chasse",
+          "flush_entity": "Capteur de grande chasse",
           "fan_entity": "Ventilateur"
         },
         "data_description": {
           "name": "Préfixe des noms d'entités.",
           "seat_entity": "Capteur binaire : on = abattant ouvert.",
-          "flush_entity": "Capteur binaire : on = chasse d'eau en cours.",
+          "short_flush_entity": "Capteur binaire facultatif : on = petite chasse en cours.",
+          "flush_entity": "Capteur binaire facultatif : on = grande chasse en cours.",
           "fan_entity": "Interrupteur ou ventilateur à allumer et éteindre."
         }
       }
     },
     "error": {
-      "same_entity": "L'abattant et la chasse d'eau doivent être deux capteurs différents.",
+      "same_entity": "L'abattant, la petite chasse et la grande chasse doivent être des capteurs différents.",
       "fan_in_use": "Ce ventilateur est déjà piloté par une autre instance de Ventilateur WC."
     }
   },
@@ -29,18 +31,20 @@
         "title": "Entités Ventilateur WC",
         "data": {
           "seat_entity": "Capteur d'abattant",
-          "flush_entity": "Capteur de chasse d'eau",
+          "short_flush_entity": "Capteur de petite chasse",
+          "flush_entity": "Capteur de grande chasse",
           "fan_entity": "Ventilateur"
         },
         "data_description": {
           "seat_entity": "Capteur binaire : on = abattant ouvert.",
-          "flush_entity": "Capteur binaire : on = chasse d'eau en cours.",
+          "short_flush_entity": "Capteur binaire facultatif : on = petite chasse en cours.",
+          "flush_entity": "Capteur binaire facultatif : on = grande chasse en cours.",
           "fan_entity": "Interrupteur ou ventilateur à allumer et éteindre."
         }
       }
     },
     "error": {
-      "same_entity": "L'abattant et la chasse d'eau doivent être deux capteurs différents.",
+      "same_entity": "L'abattant, la petite chasse et la grande chasse doivent être des capteurs différents.",
       "fan_in_use": "Ce ventilateur est déjà piloté par une autre instance de Ventilateur WC."
     }
   },
@@ -58,11 +62,17 @@
       "seat_cap": {
         "name": "Plafond abattant"
       },
+      "short_flush_extra": {
+        "name": "Supplément petite chasse"
+      },
+      "short_flush_factor": {
+        "name": "Facteur petite chasse"
+      },
       "flush_extra": {
-        "name": "Supplément chasse"
+        "name": "Supplément grande chasse"
       },
       "flush_factor": {
-        "name": "Facteur chasse"
+        "name": "Facteur grande chasse"
       },
       "min_time": {
         "name": "Temps minimum"
@@ -87,7 +97,10 @@
             "name": "Durée abattant ouvert"
           },
           "flush_durations": {
-            "name": "Durées des chasses"
+            "name": "Durées des grandes chasses"
+          },
+          "short_flush_durations": {
+            "name": "Durées des petites chasses"
           },
           "post_ventilation": {
             "name": "Durée de post-ventilation"

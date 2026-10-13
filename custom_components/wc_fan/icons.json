@@ -1,14 +1,36 @@
 {
   "entity": {
     "number": {
-      "activation_delay": { "default": "mdi:timer-sand" },
-      "base_time": { "default": "mdi:timer-outline" },
-      "seat_factor": { "default": "mdi:toilet" },
-      "seat_cap": { "default": "mdi:arrow-collapse-up" },
-      "flush_extra": { "default": "mdi:water-plus" },
-      "flush_factor": { "default": "mdi:water-percent" },
-      "min_time": { "default": "mdi:timer-minus-outline" },
-      "max_time": { "default": "mdi:timer-plus-outline" }
+      "activation_delay": {
+        "default": "mdi:timer-sand"
+      },
+      "base_time": {
+        "default": "mdi:timer-outline"
+      },
+      "seat_factor": {
+        "default": "mdi:toilet"
+      },
+      "seat_cap": {
+        "default": "mdi:arrow-collapse-up"
+      },
+      "short_flush_extra": {
+        "default": "mdi:water-outline"
+      },
+      "short_flush_factor": {
+        "default": "mdi:water-percent-alert"
+      },
+      "flush_extra": {
+        "default": "mdi:water-plus"
+      },
+      "flush_factor": {
+        "default": "mdi:water-percent"
+      },
+      "min_time": {
+        "default": "mdi:timer-minus-outline"
+      },
+      "max_time": {
+        "default": "mdi:timer-plus-outline"
+      }
     },
     "sensor": {
       "state": {
@@ -22,7 +44,9 @@
           "disabled": "mdi:fan-remove"
         }
       },
-      "expected_end": { "default": "mdi:clock-end" }
+      "expected_end": {
+        "default": "mdi:clock-end"
+      }
     },
     "switch": {
       "enabled": {

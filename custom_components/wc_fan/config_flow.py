@@ -1,4 +1,10 @@
-"""Config flow and options flow (SPEC.md §2)."""
+"""Config flow and options flow (SPEC.md §2, extended in v1.1).
+
+v1.1: the seat sensor and the fan are required; the short and the long flush
+sensors are optional. An optional field cleared in the form is simply absent
+from ``user_input``, so it is always saved explicitly (``None``) to override
+any value stored in ``entry.data`` by a previous version.
+"""
 
 from __future__ import annotations
 
@@ -21,19 +27,25 @@ from homeassistant.helpers.selector import (
     TextSelector,
 )
 
-from .const import CONF_FAN, CONF_FLUSH, CONF_SEAT, DOMAIN, FAN_DOMAINS
+from .const import (
+    CONF_FAN,
+    CONF_FLUSH,
+    CONF_SEAT,
+    CONF_SHORT_FLUSH,
+    DOMAIN,
+    FAN_DOMAINS,
+)
 
 _LOGGER = logging.getLogger(__package__)
 
-# §2: seat and flush are binary_sensors; the fan is a switch or a fan.
+_BINARY = EntitySelector(EntitySelectorConfig(domain="binary_sensor"))
+
+# §2 / v1.1: seat required, short and long flush optional, fan switch or fan.
 ENTITIES_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_SEAT): EntitySelector(
-            EntitySelectorConfig(domain="binary_sensor")
-        ),
-        vol.Required(CONF_FLUSH): EntitySelector(
-            EntitySelectorConfig(domain="binary_sensor")
-        ),
+        vol.Required(CONF_SEAT): _BINARY,
+        vol.Optional(CONF_SHORT_FLUSH): _BINARY,
+        vol.Optional(CONF_FLUSH): _BINARY,
         vol.Required(CONF_FAN): EntitySelector(
             EntitySelectorConfig(domain=list(FAN_DOMAINS))
         ),
@@ -44,12 +56,24 @@ USER_SCHEMA = vol.Schema({vol.Required(CONF_NAME): TextSelector()}).extend(
 )
 
 
+def _entities(user_input: dict[str, Any]) -> dict[str, Any]:
+    """Return the four entity keys, with ``None`` for an empty optional one."""
+    return {
+        CONF_SEAT: user_input[CONF_SEAT],
+        CONF_SHORT_FLUSH: user_input.get(CONF_SHORT_FLUSH) or None,
+        CONF_FLUSH: user_input.get(CONF_FLUSH) or None,
+        CONF_FAN: user_input[CONF_FAN],
+    }
+
+
 def _validate(
     hass: HomeAssistant, data: dict[str, Any], current_entry_id: str | None
 ) -> dict[str, str]:
     """Return form errors; invalid configurations are logged at ERROR."""
     errors: dict[str, str] = {}
-    if data[CONF_SEAT] == data[CONF_FLUSH]:
+    sensors = [data[k] for k in (CONF_SEAT, CONF_SHORT_FLUSH, CONF_FLUSH) if data[k]]
+    if len(sensors) != len(set(sensors)):
+        # v1.1: seat, short and long flush must be distinct entities.
         errors["base"] = "same_entity"
     else:
         # One fan cannot be driven by two instances (they would fight).
@@ -74,19 +98,13 @@ class WcFanConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Ask name, seat, flush and fan."""
+        """Ask name, seat, optional flush sensors and fan."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            errors = _validate(self.hass, user_input, None)
+            data = _entities(user_input)
+            errors = _validate(self.hass, data, None)
             if not errors:
-                return self.async_create_entry(
-                    title=user_input[CONF_NAME],
-                    data={
-                        CONF_SEAT: user_input[CONF_SEAT],
-                        CONF_FLUSH: user_input[CONF_FLUSH],
-                        CONF_FAN: user_input[CONF_FAN],
-                    },
-                )
+                return self.async_create_entry(title=user_input[CONF_NAME], data=data)
         return self.async_show_form(
             step_id="user",
             data_schema=self.add_suggested_values_to_schema(USER_SCHEMA, user_input),
@@ -101,7 +119,7 @@ class WcFanConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class WcFanOptionsFlow(OptionsFlow):
-    """§2: change the three entities; the entry is reloaded afterwards."""
+    """§2: change the entities; the entry is reloaded afterwards."""
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -109,10 +127,15 @@ class WcFanOptionsFlow(OptionsFlow):
         """Show the entities form prefilled with the current values."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            errors = _validate(self.hass, user_input, self.config_entry.entry_id)
+            data = _entities(user_input)
+            errors = _validate(self.hass, data, self.config_entry.entry_id)
             if not errors:
-                return self.async_create_entry(data=user_input)
-        current = user_input or {**self.config_entry.data, **self.config_entry.options}
+                return self.async_create_entry(data=data)
+        current = user_input or {
+            k: v
+            for k, v in {**self.config_entry.data, **self.config_entry.options}.items()
+            if v  # leave empty optional fields empty in the form
+        }
         return self.async_show_form(
             step_id="init",
             data_schema=self.add_suggested_values_to_schema(ENTITIES_SCHEMA, current),

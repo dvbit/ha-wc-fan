@@ -14,7 +14,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
-from .const import CONF_FAN, CONF_FLUSH, CONF_SEAT
+from .const import CONF_FAN, CONF_SEAT
 from .manager import WcFanManager
 
 _LOGGER = logging.getLogger(__package__)
@@ -27,9 +27,9 @@ type WcFanConfigEntry = ConfigEntry[WcFanManager]
 async def async_setup_entry(hass: HomeAssistant, entry: WcFanConfigEntry) -> bool:
     """Set up one WC fan instance."""
     config = {**entry.data, **entry.options}
-    missing = [key for key in (CONF_SEAT, CONF_FLUSH, CONF_FAN) if not config.get(key)]
+    missing = [key for key in (CONF_SEAT, CONF_FAN) if not config.get(key)]
     if missing:
-        # §2: the three entities are mandatory.
+        # §2 / v1.1: seat and fan are mandatory, the flush sensors optional.
         _LOGGER.error("[%s] invalid configuration, missing: %s", entry.title, missing)
         return False
 

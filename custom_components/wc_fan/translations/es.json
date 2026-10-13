@@ -3,23 +3,25 @@
     "step": {
       "user": {
         "title": "Extractor WC",
-        "description": "Extractor del baño controlado por la tapa y la cisterna.",
+        "description": "Extractor del baño controlado por la tapa y, opcionalmente, por la descarga corta y larga.",
         "data": {
           "name": "Nombre",
           "seat_entity": "Sensor de tapa",
-          "flush_entity": "Sensor de cisterna",
+          "short_flush_entity": "Sensor de descarga corta",
+          "flush_entity": "Sensor de descarga larga",
           "fan_entity": "Extractor"
         },
         "data_description": {
           "name": "Prefijo de los nombres de las entidades.",
           "seat_entity": "Sensor binario: on = tapa abierta.",
-          "flush_entity": "Sensor binario: on = descarga en curso.",
+          "short_flush_entity": "Sensor binario opcional: on = descarga corta en curso.",
+          "flush_entity": "Sensor binario opcional: on = descarga larga en curso.",
           "fan_entity": "Interruptor o ventilador a encender y apagar."
         }
       }
     },
     "error": {
-      "same_entity": "La tapa y la cisterna deben ser dos sensores distintos.",
+      "same_entity": "La tapa, la descarga corta y la descarga larga deben ser sensores distintos.",
       "fan_in_use": "Este extractor ya está controlado por otra instancia de Extractor WC."
     }
   },
@@ -29,18 +31,20 @@
         "title": "Entidades Extractor WC",
         "data": {
           "seat_entity": "Sensor de tapa",
-          "flush_entity": "Sensor de cisterna",
+          "short_flush_entity": "Sensor de descarga corta",
+          "flush_entity": "Sensor de descarga larga",
           "fan_entity": "Extractor"
         },
         "data_description": {
           "seat_entity": "Sensor binario: on = tapa abierta.",
-          "flush_entity": "Sensor binario: on = descarga en curso.",
+          "short_flush_entity": "Sensor binario opcional: on = descarga corta en curso.",
+          "flush_entity": "Sensor binario opcional: on = descarga larga en curso.",
           "fan_entity": "Interruptor o ventilador a encender y apagar."
         }
       }
     },
     "error": {
-      "same_entity": "La tapa y la cisterna deben ser dos sensores distintos.",
+      "same_entity": "La tapa, la descarga corta y la descarga larga deben ser sensores distintos.",
       "fan_in_use": "Este extractor ya está controlado por otra instancia de Extractor WC."
     }
   },
@@ -58,11 +62,17 @@
       "seat_cap": {
         "name": "Límite tapa"
       },
+      "short_flush_extra": {
+        "name": "Extra descarga corta"
+      },
+      "short_flush_factor": {
+        "name": "Factor descarga corta"
+      },
       "flush_extra": {
-        "name": "Extra descarga"
+        "name": "Extra descarga larga"
       },
       "flush_factor": {
-        "name": "Factor descarga"
+        "name": "Factor descarga larga"
       },
       "min_time": {
         "name": "Tiempo mínimo"
@@ -87,7 +97,10 @@
             "name": "Tiempo tapa abierta"
           },
           "flush_durations": {
-            "name": "Duraciones de descarga"
+            "name": "Duraciones de descargas largas"
+          },
+          "short_flush_durations": {
+            "name": "Duraciones de descargas cortas"
           },
           "post_ventilation": {
             "name": "Tiempo de posventilación"

@@ -46,7 +46,10 @@ from .const import (
     CONF_FAN,
     CONF_FLUSH,
     CONF_SEAT,
+    CONF_SHORT_FLUSH,
     DOMAIN,
+    FLUSH_LONG,
+    FLUSH_SHORT,
     STATE_COUNTDOWN,
     STORAGE_SAVE_DELAY,
     STORAGE_VERSION,
@@ -83,8 +86,14 @@ class WcFanManager:
         config = {**entry.data, **entry.options}
         self.name: str = entry.title
         self.seat_id: str = config[CONF_SEAT]
-        self.flush_id: str = config[CONF_FLUSH]
         self.fan_id: str = config[CONF_FAN]
+        # v1.1: both flush sensors are optional; only configured ones are kept.
+        self.flush_ids: dict[str, str] = {
+            kind: entity_id
+            for kind, key in ((FLUSH_SHORT, CONF_SHORT_FLUSH), (FLUSH_LONG, CONF_FLUSH))
+            if (entity_id := config.get(key))
+        }
+        self._flush_kind_by_id = {v: k for k, v in self.flush_ids.items()}
         self.params = Params()
         self.enabled = True
         self.engine = WcFanEngine(self.name, self.params, _LOGGER)
@@ -114,7 +123,8 @@ class WcFanManager:
 
     async def _async_start(self, _hass: HomeAssistant) -> None:
         """Resume the engine and subscribe to the input entities."""
-        for entity_id in (self.seat_id, self.flush_id, self.fan_id):
+        tracked = [self.seat_id, *self.flush_ids.values(), self.fan_id]
+        for entity_id in tracked:
             if self.hass.states.get(entity_id) is None:
                 _LOGGER.warning(
                     "[%s] entity %s not found, treated as unavailable",
@@ -124,7 +134,8 @@ class WcFanManager:
         cmds = self.engine.start(
             self._restored,
             normalize(self.hass.states.get(self.seat_id)),
-            normalize(self.hass.states.get(self.flush_id)),
+            self._flush_initial(FLUSH_SHORT),
+            self._flush_initial(FLUSH_LONG),
             normalize(self.hass.states.get(self.fan_id)),
             self.enabled,
             dt_util.utcnow().timestamp(),
@@ -133,18 +144,24 @@ class WcFanManager:
         self._unsubs.append(
             async_track_state_change_event(
                 self.hass,
-                [self.seat_id, self.flush_id, self.fan_id],
+                tracked,
                 self._async_state_changed,
             )
         )
         self._apply(cmds)
         _LOGGER.info(
-            "[%s] running: seat=%s flush=%s fan=%s",
+            "[%s] running: seat=%s short=%s long=%s fan=%s",
             self.name,
             self.seat_id,
-            self.flush_id,
+            self.flush_ids.get(FLUSH_SHORT, "-"),
+            self.flush_ids.get(FLUSH_LONG, "-"),
             self.fan_id,
         )
+
+    def _flush_initial(self, kind: str) -> str:
+        """Return the initial state of a flush sensor; NA when not configured."""
+        entity_id = self.flush_ids.get(kind)
+        return normalize(self.hass.states.get(entity_id)) if entity_id else NA
 
     async def async_shutdown(self) -> None:
         """Unsubscribe everything and flush the persisted session."""
@@ -201,7 +218,7 @@ class WcFanManager:
     # ------------------------------------------------------------------ events
     @callback
     def _async_state_changed(self, event: Event[EventStateChangedData]) -> None:
-        """Dispatch a state change of one of the three input entities."""
+        """Dispatch a state change of one of the tracked input entities."""
         entity_id = event.data["entity_id"]
         old_state = event.data["old_state"]
         new_state = event.data["new_state"]
@@ -213,8 +230,8 @@ class WcFanManager:
 
         if entity_id == self.seat_id:
             cmds = self.engine.seat_event(new, now)
-        elif entity_id == self.flush_id:
-            cmds = self.engine.flush_event(new, now)
+        elif (kind := self._flush_kind_by_id.get(entity_id)) is not None:
+            cmds = self.engine.flush_event(kind, new, now)
         else:
             cmds = self.engine.fan_event(
                 old, new, self._is_manual(old, new, new_state), now

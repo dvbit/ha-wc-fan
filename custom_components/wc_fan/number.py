@@ -11,9 +11,11 @@ from homeassistant.components.number import (
 )
 from homeassistant.const import EntityCategory, Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import WcFanConfigEntry
+from .const import DOMAIN, FLUSH_PARAMS
 from .engine import PARAM_SPECS
 from .entity import WcFanEntity
 from .manager import WcFanManager
@@ -26,9 +28,32 @@ async def async_setup_entry(
     entry: WcFanConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Create one number entity per parameter of §3."""
+    """Create one number entity per parameter of §3.
+
+    v1.1: the extra/factor parameters of a flush sensor that is not
+    configured are not created, and are removed from the entity registry if a
+    previous configuration had created them.
+    """
     manager = entry.runtime_data
-    async_add_entities(WcFanNumber(manager, key) for key in PARAM_SPECS)
+    skipped = {
+        key
+        for kind, keys in FLUSH_PARAMS.items()
+        if kind not in manager.flush_ids
+        for key in keys
+    }
+    registry = er.async_get(hass)
+    for key in skipped:
+        unique_id = f"{entry.entry_id}_{key}"
+        if entity_id := registry.async_get_entity_id(
+            Platform.NUMBER, DOMAIN, unique_id
+        ):
+            registry.async_remove(entity_id)
+            _LOGGER.info(
+                "[%s] %s removed (flush sensor not set)", manager.name, entity_id
+            )
+    async_add_entities(
+        WcFanNumber(manager, key) for key in PARAM_SPECS if key not in skipped
+    )
 
 
 class WcFanNumber(WcFanEntity, RestoreNumber):

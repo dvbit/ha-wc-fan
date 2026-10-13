@@ -3,23 +3,25 @@
     "step": {
       "user": {
         "title": "Aeratore WC",
-        "description": "Aeratore del bagno comandato da tavoletta e sciacquone.",
+        "description": "Aeratore del bagno comandato dalla tavoletta e, opzionalmente, dallo scarico breve e lungo.",
         "data": {
           "name": "Nome",
           "seat_entity": "Sensore tavoletta",
-          "flush_entity": "Sensore sciacquone",
+          "short_flush_entity": "Sensore scarico breve",
+          "flush_entity": "Sensore scarico lungo",
           "fan_entity": "Aeratore"
         },
         "data_description": {
           "name": "Prefisso dei nomi delle entità.",
           "seat_entity": "Sensore binario: on = tavoletta aperta.",
-          "flush_entity": "Sensore binario: on = scarico in corso.",
+          "short_flush_entity": "Sensore binario opzionale: on = scarico breve in corso.",
+          "flush_entity": "Sensore binario opzionale: on = scarico lungo in corso.",
           "fan_entity": "Switch o ventola da accendere e spegnere."
         }
       }
     },
     "error": {
-      "same_entity": "Tavoletta e sciacquone devono essere due sensori diversi.",
+      "same_entity": "Tavoletta, scarico breve e scarico lungo devono essere sensori diversi.",
       "fan_in_use": "Questo aeratore è già comandato da un'altra istanza di Aeratore WC."
     }
   },
@@ -29,18 +31,20 @@
         "title": "Entità Aeratore WC",
         "data": {
           "seat_entity": "Sensore tavoletta",
-          "flush_entity": "Sensore sciacquone",
+          "short_flush_entity": "Sensore scarico breve",
+          "flush_entity": "Sensore scarico lungo",
           "fan_entity": "Aeratore"
         },
         "data_description": {
           "seat_entity": "Sensore binario: on = tavoletta aperta.",
-          "flush_entity": "Sensore binario: on = scarico in corso.",
+          "short_flush_entity": "Sensore binario opzionale: on = scarico breve in corso.",
+          "flush_entity": "Sensore binario opzionale: on = scarico lungo in corso.",
           "fan_entity": "Switch o ventola da accendere e spegnere."
         }
       }
     },
     "error": {
-      "same_entity": "Tavoletta e sciacquone devono essere due sensori diversi.",
+      "same_entity": "Tavoletta, scarico breve e scarico lungo devono essere sensori diversi.",
       "fan_in_use": "Questo aeratore è già comandato da un'altra istanza di Aeratore WC."
     }
   },
@@ -58,11 +62,17 @@
       "seat_cap": {
         "name": "Limite tavoletta"
       },
+      "short_flush_extra": {
+        "name": "Extra scarico breve"
+      },
+      "short_flush_factor": {
+        "name": "Fattore scarico breve"
+      },
       "flush_extra": {
-        "name": "Extra scarico"
+        "name": "Extra scarico lungo"
       },
       "flush_factor": {
-        "name": "Fattore scarico"
+        "name": "Fattore scarico lungo"
       },
       "min_time": {
         "name": "Tempo minimo"
@@ -87,7 +97,10 @@
             "name": "Tempo tavoletta aperta"
           },
           "flush_durations": {
-            "name": "Durate scarichi"
+            "name": "Durate scarichi lunghi"
+          },
+          "short_flush_durations": {
+            "name": "Durate scarichi brevi"
           },
           "post_ventilation": {
             "name": "Tempo di post-ventilazione"

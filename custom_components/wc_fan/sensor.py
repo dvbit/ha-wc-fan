@@ -52,6 +52,9 @@ class WcFanStateSensor(WcFanEntity, SensorEntity):
         return {
             "seat_total": round(engine.data.seat_total, 1),
             "flush_durations": [round(d, 1) for d in engine.data.flushes or []],
+            "short_flush_durations": [
+                round(d, 1) for d in engine.data.short_flushes or []
+            ],
             "post_ventilation": round(engine.post_ventilation(), 1),
         }
 

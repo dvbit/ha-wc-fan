@@ -3,13 +3,14 @@
 # Aeratore WC (WC Fan)
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/)
-![Versione](https://img.shields.io/badge/versione-1.0.0-blue)
+![Versione](https://img.shields.io/badge/versione-1.1.0-blue)
 
 🇬🇧 [Read in English](README.md)
 
 Integrazione custom per Home Assistant che accende e spegne l'aeratore del bagno
-in base al sensore **tavoletta** e al sensore **sciacquone**, con un tempo di
-post-ventilazione calcolato sull'intera sessione d'uso. Multi-istanza: una voce
+in base al sensore **tavoletta** e, opzionalmente, ai sensori di **scarico
+breve** e **scarico lungo**, con un tempo di post-ventilazione calcolato
+sull'intera sessione d'uso. Multi-istanza: una voce
 per ogni bagno.
 
 Specifica completa: [SPEC.md](SPEC.md).
@@ -22,12 +23,19 @@ Specifica completa: [SPEC.md](SPEC.md).
 3. Quando entrambi sono `off` parte un **countdown** di durata **T**:
 
    ```
-   T = clamp( P2 + P3 · min(D_t, P4) + Σ (P5 + P6 · d_i), P7, P8 )
+   T = clamp( P2 + P3 · min(D_t, P4)
+              + Σ_brevi (P5b + P6b · d_i) + Σ_lunghi (P5 + P6 · d_i), P7, P8 )
    ```
 
    `D_t` = tempo totale di tavoletta aperta nella sessione, `d_i` = durata di
-   ogni scarico. Esempio: tavoletta aperta 300 s, scarichi da 6 s e 3 s →
-   120 + 150 + 72 + 66 = **408 s**.
+   ogni scarico. Esempio: tavoletta aperta 300 s, uno scarico lungo da 6 s e
+   uno breve da 3 s → 120 + 150 + 72 + 36 = **378 s**.
+
+   Senza sensori di scarico le somme sono vuote:
+   T = clamp(P2 + P3 · min(D_t, P4), P7, P8). Con i default, 1 min di
+   tavoletta aperta → 150 s, 10 min → 420 s.
+   Se i due contatti sono `on` insieme (placche a doppio tasto) contano come
+   **un solo scarico lungo**, dal primo `on` all'ultimo `off`.
 4. Una nuova apertura o un nuovo scarico durante il countdown riprende la stessa
    sessione.
 5. Accendendo l'aeratore **a mano** l'automazione si sospende (`manual`) finché
@@ -47,11 +55,16 @@ Richiede Home Assistant **2025.6.0** o successivo.
 | Campo | Entità | Significato |
 | --- | --- | --- |
 | Nome | testo | nome del dispositivo e prefisso delle entità |
-| Sensore tavoletta | `binary_sensor` | `on` = tavoletta aperta |
-| Sensore sciacquone | `binary_sensor` | `on` = scarico in corso |
-| Aeratore | `switch` o `fan` | l'aeratore da comandare |
+| Sensore tavoletta | `binary_sensor` | `on` = tavoletta aperta (obbligatorio) |
+| Sensore scarico breve | `binary_sensor` | `on` = scarico breve in corso (opzionale) |
+| Sensore scarico lungo | `binary_sensor` | `on` = scarico lungo in corso (opzionale) |
+| Aeratore | `switch` o `fan` | l'aeratore da comandare (obbligatorio) |
 
-Le tre entità si possono cambiare in seguito da **Configura** (options flow).
+Le entità si possono cambiare in seguito da **Configura** (options flow).
+I parametri di un sensore di scarico non configurato non vengono creati.
+
+**Aggiornamento dalla 1.0:** il sensore sciacquone esistente diventa lo
+scarico **lungo**; entity_id e valori restano invariati.
 
 ## Entità
 
@@ -65,8 +78,10 @@ seguono la lingua di Home Assistant.
 | `number.bagno_base_time` | 120 s | 0–1800 | P2 tempo base |
 | `number.bagno_seat_factor` | 0.5 s/s | 0–5 | P3 fattore tavoletta |
 | `number.bagno_seat_cap` | 1200 s | 60–3600 | P4 limite tavoletta |
-| `number.bagno_flush_extra` | 60 s | 0–600 | P5 extra scarico |
-| `number.bagno_flush_factor` | 2 s/s | 0–10 | P6 fattore scarico |
+| `number.bagno_short_flush_extra` | 30 s | 0–600 | P5b extra scarico breve |
+| `number.bagno_short_flush_factor` | 2 s/s | 0–10 | P6b fattore scarico breve |
+| `number.bagno_flush_extra` | 60 s | 0–600 | P5 extra scarico lungo |
+| `number.bagno_flush_factor` | 2 s/s | 0–10 | P6 fattore scarico lungo |
 | `number.bagno_min_time` | 120 s | 0–3600 | P7 tempo minimo |
 | `number.bagno_max_time` | 1200 s | 60–7200 | P8 tempo massimo |
 | `sensor.bagno_state` | — | vedi sotto | §5 stato |
@@ -76,8 +91,9 @@ Valori di `sensor.bagno_state` (tradotti nell'interfaccia): `idle` (inattivo),
 `waiting` (attesa), `active` (attivo), `countdown`, `manual` (manuale),
 `disabled` (disabilitato).
 
-Attributi: `seat_total` (D_t, s), `flush_durations` (S, s),
-`post_ventilation` (T della sessione corrente, s).
+Attributi: `seat_total` (D_t, s), `flush_durations` (scarichi lunghi, s),
+`short_flush_durations` (scarichi brevi, s), `post_ventilation` (T della
+sessione corrente, s).
 
 Tutti i valori sopravvivono al riavvio; una sessione interrotta viene ripresa (§8).
 
@@ -158,6 +174,22 @@ entities:
     entity: sensor.bagno_state
     attribute: post_ventilation
     name: Post-ventilazione (s)
+```
+
+### Tavoletta da un sensore di inclinazione/vibrazione
+
+Se la tavoletta non ha un contatto, un helper Template (*Impostazioni →
+Dispositivi e servizi → Aiutanti → Crea aiutante → Template → Sensore
+binario*) può ricavarla dall'angolo di inclinazione. *Stato*:
+
+```jinja
+{{ states('sensor.vibrazione_wc_angle_x') | float(0) > 35 }}
+```
+
+*Opzioni avanzate → Disponibilità*:
+
+```jinja
+{{ has_value('sensor.vibrazione_wc_angle_x') }}
 ```
 
 ## Log

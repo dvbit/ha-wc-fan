@@ -127,3 +127,25 @@ Livello debug: ogni transizione di stato con evento causa, D\_t, S, T calcolato.
   conteggiata dall'istante di avvio; se l'aeratore è `off` viene riacceso.
 - Ripresa `countdown` dopo riavvio con aeratore `off`: viene riacceso fino alla fine.
 - Lo stesso aeratore non può essere usato da due istanze (errore nel config flow).
+
+---
+
+## Appendice — Requisito consolidato v1.1.0 (13/10/2026)
+
+- **Sensori**: tavoletta obbligatoria; scarico **breve** (`short_flush_entity`) e
+  scarico **lungo** (`flush_entity`, chiave della v1.0) opzionali; le entità
+  configurate devono essere tutte diverse.
+- **Formula** (estende §4):
+  `T = clamp( P2 + P3·min(D_t, P4) + Σ_brevi(P5b + P6b·d_i) + Σ_lunghi(P5 + P6·d_i), P7, P8 )`.
+  Senza sciacquoni: `T = clamp( P2 + P3·min(D_t, P4), P7, P8 )`.
+- **Nuovi parametri**: `short_flush_extra` (P5b, default 30 s, 0–600) e
+  `short_flush_factor` (P6b, default 2 s/s, 0–10, step 0.1). P5/P6 restano per
+  lo scarico lungo.
+- **Sovrapposizione**: breve e lungo `on` insieme = un solo scarico **lungo**,
+  dal primo `on` all'ultimo `off`. Lo "sciacquone" di §5 è il loro OR logico.
+- **Entità**: i number di uno scarico non configurato non vengono creati e, se
+  presenti, vengono rimossi dal registro.
+- **Migrazione dalla v1.0**: il `flush_entity` esistente diventa lo scarico
+  lungo; entity_id, valori e sessione persistita invariati.
+- §5–§8 invariati: qualunque scarico accende subito l'aeratore e riprende il
+  countdown.

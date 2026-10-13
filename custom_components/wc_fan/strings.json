@@ -3,23 +3,25 @@
     "step": {
       "user": {
         "title": "WC Fan",
-        "description": "Bathroom fan driven by the seat lid and the flush.",
+        "description": "Bathroom fan driven by the seat lid and, optionally, the short and long flush.",
         "data": {
           "name": "Name",
           "seat_entity": "Seat lid sensor",
-          "flush_entity": "Flush sensor",
+          "short_flush_entity": "Short flush sensor",
+          "flush_entity": "Long flush sensor",
           "fan_entity": "Fan"
         },
         "data_description": {
           "name": "Prefix of the entity names.",
           "seat_entity": "Binary sensor: on = lid open.",
-          "flush_entity": "Binary sensor: on = flush in progress.",
+          "short_flush_entity": "Optional binary sensor: on = short flush in progress.",
+          "flush_entity": "Optional binary sensor: on = long flush in progress.",
           "fan_entity": "Switch or fan to turn on and off."
         }
       }
     },
     "error": {
-      "same_entity": "Seat and flush must be two different sensors.",
+      "same_entity": "Seat, short flush and long flush must be different sensors.",
       "fan_in_use": "This fan is already driven by another WC Fan instance."
     }
   },
@@ -29,31 +31,55 @@
         "title": "WC Fan entities",
         "data": {
           "seat_entity": "Seat lid sensor",
-          "flush_entity": "Flush sensor",
+          "short_flush_entity": "Short flush sensor",
+          "flush_entity": "Long flush sensor",
           "fan_entity": "Fan"
         },
         "data_description": {
           "seat_entity": "Binary sensor: on = lid open.",
-          "flush_entity": "Binary sensor: on = flush in progress.",
+          "short_flush_entity": "Optional binary sensor: on = short flush in progress.",
+          "flush_entity": "Optional binary sensor: on = long flush in progress.",
           "fan_entity": "Switch or fan to turn on and off."
         }
       }
     },
     "error": {
-      "same_entity": "Seat and flush must be two different sensors.",
+      "same_entity": "Seat, short flush and long flush must be different sensors.",
       "fan_in_use": "This fan is already driven by another WC Fan instance."
     }
   },
   "entity": {
     "number": {
-      "activation_delay": { "name": "Activation delay" },
-      "base_time": { "name": "Base time" },
-      "seat_factor": { "name": "Seat factor" },
-      "seat_cap": { "name": "Seat cap" },
-      "flush_extra": { "name": "Flush extra" },
-      "flush_factor": { "name": "Flush factor" },
-      "min_time": { "name": "Minimum time" },
-      "max_time": { "name": "Maximum time" }
+      "activation_delay": {
+        "name": "Activation delay"
+      },
+      "base_time": {
+        "name": "Base time"
+      },
+      "seat_factor": {
+        "name": "Seat factor"
+      },
+      "seat_cap": {
+        "name": "Seat cap"
+      },
+      "short_flush_extra": {
+        "name": "Short flush extra"
+      },
+      "short_flush_factor": {
+        "name": "Short flush factor"
+      },
+      "flush_extra": {
+        "name": "Long flush extra"
+      },
+      "flush_factor": {
+        "name": "Long flush factor"
+      },
+      "min_time": {
+        "name": "Minimum time"
+      },
+      "max_time": {
+        "name": "Maximum time"
+      }
     },
     "sensor": {
       "state": {
@@ -67,15 +93,28 @@
           "disabled": "Disabled"
         },
         "state_attributes": {
-          "seat_total": { "name": "Seat open time" },
-          "flush_durations": { "name": "Flush durations" },
-          "post_ventilation": { "name": "Post-ventilation time" }
+          "seat_total": {
+            "name": "Seat open time"
+          },
+          "flush_durations": {
+            "name": "Long flush durations"
+          },
+          "short_flush_durations": {
+            "name": "Short flush durations"
+          },
+          "post_ventilation": {
+            "name": "Post-ventilation time"
+          }
         }
       },
-      "expected_end": { "name": "Expected end" }
+      "expected_end": {
+        "name": "Expected end"
+      }
     },
     "switch": {
-      "enabled": { "name": "Enabled" }
+      "enabled": {
+        "name": "Enabled"
+      }
     }
   }
 }
