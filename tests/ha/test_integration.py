@@ -15,12 +15,15 @@ from custom_components.wc_fan.const import (
     CONF_FLUSH,
     CONF_SEAT,
     CONF_SHORT_FLUSH,
+    CONF_TIMER,
     DOMAIN,
 )
 from homeassistant import config_entries
 from homeassistant.core import Context, HomeAssistant, ServiceCall
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import entity_registry as er
+from homeassistant.setup import async_setup_component
+from homeassistant.util import dt as dt_util
 
 SEAT = "binary_sensor.seat"
 FLUSH = "binary_sensor.flush"
@@ -76,7 +79,7 @@ async def test_config_flow(hass: HomeAssistant) -> None:
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Bagno"
-    assert result["data"] == {**DATA, CONF_SHORT_FLUSH: None}
+    assert result["data"] == {**DATA, CONF_SHORT_FLUSH: None, CONF_TIMER: None}
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -221,6 +224,7 @@ async def test_config_flow_without_flush(hass: HomeAssistant) -> None:
         CONF_SEAT: SEAT,
         CONF_SHORT_FLUSH: None,
         CONF_FLUSH: None,
+        CONF_TIMER: None,
         CONF_FAN: FAN,
     }
 
@@ -340,3 +344,116 @@ async def test_max_on_manual_mode(
     await _tick(hass, freezer, 301)
     assert calls == ["turn_off"]
     assert hass.states.get("sensor.bagno_state").state == "idle"
+
+
+# ----------------------------------------------------------------- v1.4 tests
+TIMER = "timer.wc"
+
+
+async def _setup_timer(hass: HomeAssistant) -> list[str]:
+    """Set up the real timer helper and an entry mirroring on it."""
+    assert await async_setup_component(
+        hass, "timer", {"timer": {"wc": {"duration": "01:00:00"}}}
+    )
+    _, calls = await _setup(hass, {CONF_SEAT: SEAT, CONF_FAN: FAN, CONF_TIMER: TIMER})
+    return calls
+
+
+def _finishes_in(hass: HomeAssistant) -> float:
+    """Seconds left according to the timer helper's ``finishes_at``."""
+    end = dt_util.parse_datetime(hass.states.get(TIMER).attributes["finishes_at"])
+    return end.timestamp() - dt_util.utcnow().timestamp()
+
+
+async def test_timer_helper_mirrors_session(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
+    """v1.4: start at fan ON (max on-time), change at countdown and on edits."""
+    calls = await _setup_timer(hass)
+    assert hass.states.get(TIMER).state == "idle"
+
+    hass.states.async_set(SEAT, "on")
+    await hass.async_block_till_done()
+    assert hass.states.get(TIMER).state == "idle"  # waiting: fan still off
+    await _tick(hass, freezer, 11)
+    assert calls == ["turn_on"]
+    assert hass.states.get(TIMER).state == "active"
+    assert abs(_finishes_in(hass) - 3600) <= 2  # max on-time, 60 min
+
+    # Lid closed after 100 s: countdown T = 120 + 0.5 * 100 = 170 s.
+    await _tick(hass, freezer, 89)
+    hass.states.async_set(SEAT, "off")
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.bagno_state").state == "countdown"
+    assert abs(_finishes_in(hass) - 170) <= 2
+
+    # Parameter change during the countdown: base time +60 s -> timer follows.
+    await hass.services.async_call(
+        "number",
+        "set_value",
+        {"entity_id": "number.bagno_base_time", "value": 180},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+    assert abs(_finishes_in(hass) - 230) <= 2
+
+    # The countdown ends: the fan goes off and the timer finishes by itself.
+    await _tick(hass, freezer, 231)
+    assert calls == ["turn_on", "turn_off"]
+    assert hass.states.get(TIMER).state == "idle"
+
+
+async def test_timer_helper_cancel_on_manual_off(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
+    """v1.4: the helper is cancelled when the session ends early."""
+    await _setup_timer(hass)
+    hass.states.async_set(SEAT, "on")
+    await hass.async_block_till_done()
+    await _tick(hass, freezer, 11)
+    assert hass.states.get(TIMER).state == "active"
+    hass.states.async_set(FAN, "off", context=Context())  # manual OFF
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.bagno_state").state == "idle"
+    assert hass.states.get(TIMER).state == "idle"
+
+
+async def test_timer_helper_without_limit_starts_at_countdown(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
+    """v1.4: with the limit off the end is unknown while the lid is open."""
+    await _setup_timer(hass)
+    await hass.services.async_call(
+        "switch",
+        "turn_off",
+        {"entity_id": "switch.bagno_max_on_enabled"},
+        blocking=True,
+    )
+    hass.states.async_set(SEAT, "on")
+    await hass.async_block_till_done()
+    await _tick(hass, freezer, 11)
+    assert hass.states.get("sensor.bagno_state").state == "active"
+    assert hass.states.get(TIMER).state == "idle"
+    await _tick(hass, freezer, 89)
+    hass.states.async_set(SEAT, "off")
+    await hass.async_block_till_done()
+    assert hass.states.get(TIMER).state == "active"
+    assert abs(_finishes_in(hass) - 170) <= 2
+
+
+async def test_timer_in_use_error(hass: HomeAssistant) -> None:
+    """v1.4: one timer helper cannot mirror two instances."""
+    await _setup_timer(hass)
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            "name": "Altro",
+            CONF_SEAT: "binary_sensor.seat2",
+            CONF_FAN: "fan.other",
+            CONF_TIMER: TIMER,
+        },
+    )
+    assert result["errors"] == {CONF_TIMER: "timer_in_use"}

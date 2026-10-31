@@ -9,20 +9,23 @@
           "seat_entity": "Capteur d'abattant",
           "short_flush_entity": "Capteur de petite chasse",
           "flush_entity": "Capteur de grande chasse",
-          "fan_entity": "Ventilateur"
+          "fan_entity": "Ventilateur",
+          "timer_entity": "Minuteur (helper)"
         },
         "data_description": {
           "name": "Préfixe des noms d'entités.",
           "seat_entity": "Capteur binaire : on = abattant ouvert.",
           "short_flush_entity": "Capteur binaire facultatif : on = petite chasse en cours.",
           "flush_entity": "Capteur binaire facultatif : on = grande chasse en cours.",
-          "fan_entity": "Interrupteur ou ventilateur à allumer et éteindre."
+          "fan_entity": "Interrupteur ou ventilateur à allumer et éteindre.",
+          "timer_entity": "Minuteur optionnel reflétant le temps restant du ventilateur."
         }
       }
     },
     "error": {
       "same_entity": "L'abattant, la petite chasse et la grande chasse doivent être des capteurs différents.",
-      "fan_in_use": "Ce ventilateur est déjà piloté par une autre instance de Ventilateur WC."
+      "fan_in_use": "Ce ventilateur est déjà piloté par une autre instance de Ventilateur WC.",
+      "timer_in_use": "Ce minuteur est déjà utilisé par une autre instance de WC Fan."
     }
   },
   "options": {
@@ -33,19 +36,22 @@
           "seat_entity": "Capteur d'abattant",
           "short_flush_entity": "Capteur de petite chasse",
           "flush_entity": "Capteur de grande chasse",
-          "fan_entity": "Ventilateur"
+          "fan_entity": "Ventilateur",
+          "timer_entity": "Minuteur (helper)"
         },
         "data_description": {
           "seat_entity": "Capteur binaire : on = abattant ouvert.",
           "short_flush_entity": "Capteur binaire facultatif : on = petite chasse en cours.",
           "flush_entity": "Capteur binaire facultatif : on = grande chasse en cours.",
-          "fan_entity": "Interrupteur ou ventilateur à allumer et éteindre."
+          "fan_entity": "Interrupteur ou ventilateur à allumer et éteindre.",
+          "timer_entity": "Minuteur optionnel reflétant le temps restant du ventilateur."
         }
       }
     },
     "error": {
       "same_entity": "L'abattant, la petite chasse et la grande chasse doivent être des capteurs différents.",
-      "fan_in_use": "Ce ventilateur est déjà piloté par une autre instance de Ventilateur WC."
+      "fan_in_use": "Ce ventilateur est déjà piloté par une autre instance de Ventilateur WC.",
+      "timer_in_use": "Ce minuteur est déjà utilisé par une autre instance de WC Fan."
     }
   },
   "entity": {

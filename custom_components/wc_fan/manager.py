@@ -6,15 +6,18 @@ Responsibilities:
 - schedule the P1 and countdown timers exposed by the engine as deadlines;
 - send the fan commands, logging a warning when they cannot be sent (§8);
 - persist the session in a Store and resume it after a restart (§8);
-- notify the entities (state / expected end sensors) of every change.
+- notify the entities (state / expected end sensors) of every change;
+- v1.4: mirror the remaining fan time on an optional ``timer`` helper.
 """
 
 from __future__ import annotations
 
+import asyncio
 from collections import deque
 from collections.abc import Callable
 from datetime import datetime
 import logging
+import math
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.const import (
@@ -47,10 +50,13 @@ from .const import (
     CONF_FLUSH,
     CONF_SEAT,
     CONF_SHORT_FLUSH,
+    CONF_TIMER,
     DOMAIN,
     FLUSH_LONG,
     FLUSH_SHORT,
+    STATE_ACTIVE,
     STATE_COUNTDOWN,
+    STATE_MANUAL,
     STORAGE_SAVE_DELAY,
     STORAGE_VERSION,
 )
@@ -60,6 +66,15 @@ if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
 
 _LOGGER = logging.getLogger(__package__)
+
+# timer helper services (https://www.home-assistant.io/integrations/timer/).
+_TIMER_DOMAIN = "timer"
+_TIMER_ACTIVE = "active"
+# A running timer this close to its end is left to finish by itself, so the
+# ``timer.finished`` event is fired on a normal countdown end.
+_TIMER_FINISH_GRACE = 2.0
+# Differences below this many seconds are not worth a ``timer.change`` call.
+_TIMER_TOLERANCE = 1.5
 
 # How many of our own context ids are remembered for the §6 comparison.
 _OWN_CONTEXTS = 20
@@ -87,6 +102,10 @@ class WcFanManager:
         self.name: str = entry.title
         self.seat_id: str = config[CONF_SEAT]
         self.fan_id: str = config[CONF_FAN]
+        # v1.4: optional timer helper (None when not configured).
+        self.timer_id: str | None = config.get(CONF_TIMER) or None
+        self._timer_lock = asyncio.Lock()
+        self._timer_warned = False
         # v1.1: both flush sensors are optional; only configured ones are kept.
         self.flush_ids: dict[str, str] = {
             kind: entity_id
@@ -126,7 +145,7 @@ class WcFanManager:
     async def _async_start(self, _hass: HomeAssistant) -> None:
         """Resume the engine and subscribe to the input entities."""
         tracked = [self.seat_id, *self.flush_ids.values(), self.fan_id]
-        for entity_id in tracked:
+        for entity_id in (*tracked, *([self.timer_id] if self.timer_id else [])):
             if self.hass.states.get(entity_id) is None:
                 _LOGGER.warning(
                     "[%s] entity %s not found, treated as unavailable",
@@ -273,6 +292,10 @@ class WcFanManager:
                 self.hass, self._async_command(cmd), f"{DOMAIN} fan {cmd}"
             )
         self._sync_timers()
+        if self.timer_id:
+            self.entry.async_create_task(
+                self.hass, self._async_sync_timer_helper(), f"{DOMAIN} timer helper"
+            )
         self._store.async_delay_save(self.engine.as_dict, STORAGE_SAVE_DELAY)
         for update in list(self._listeners):
             update()
@@ -391,3 +414,98 @@ class WcFanManager:
         """v1.2: instant of the forced switch-off, or None."""
         end = self.engine.max_on_end
         return None if end is None else dt_util.utc_from_timestamp(end)
+
+    # ------------------------------------------------------------ timer helper
+    @property
+    def timer_target(self) -> float | None:
+        """v1.4: instant at which the fan is expected to be off, or None.
+
+        - countdown: the earlier of the countdown end and the max on-time;
+        - active: the max on-time deadline (None while the limit is off, the
+          end is then unknown until the countdown starts);
+        - manual: the max on-time deadline, only if ``max_on_manual`` is on.
+        """
+        engine = self.engine
+        if engine.state not in (STATE_ACTIVE, STATE_COUNTDOWN, STATE_MANUAL):
+            return None
+        ends = [engine.max_on_end]
+        if engine.state == STATE_COUNTDOWN:
+            ends.append(engine.data.countdown_end)
+        known = [end for end in ends if end is not None]
+        return min(known) if known else None
+
+    async def _async_timer_call(self, service: str, data: dict[str, Any]) -> bool:
+        """Call a timer service on the helper; log a warning on failure."""
+        try:
+            await self.hass.services.async_call(
+                _TIMER_DOMAIN,
+                service,
+                {ATTR_ENTITY_ID: self.timer_id, **data},
+                blocking=True,
+                context=Context(),
+            )
+        except HomeAssistantError as err:
+            _LOGGER.warning(
+                "[%s] timer %s: %s failed: %s", self.name, self.timer_id, service, err
+            )
+            return False
+        _LOGGER.debug("[%s] timer %s: %s %s", self.name, self.timer_id, service, data)
+        return True
+
+    async def _async_sync_timer_helper(self) -> None:
+        """v1.4: align the timer helper with the expected end of the fan.
+
+        Idempotent: the target is recomputed under a lock, so overlapping
+        calls cannot leave the helper in an outdated state.
+        - not running and a target exists -> ``timer.start``;
+        - running and the target moved -> ``timer.change`` with the delta (the
+          helper cannot grow beyond its running duration: then ``timer.start``);
+        - running and no target -> ``timer.cancel``, except when it is about
+          to finish by itself (normal end of the countdown).
+        """
+        async with self._timer_lock:
+            state = self.hass.states.get(self.timer_id)
+            if state is None or state.state in ("unavailable", "unknown"):
+                if not self._timer_warned:
+                    _LOGGER.warning(
+                        "[%s] timer %s not available: not updated",
+                        self.name,
+                        self.timer_id,
+                    )
+                    self._timer_warned = True
+                return
+            self._timer_warned = False
+            now = dt_util.utcnow().timestamp()
+            target = self.timer_target
+            running = state.state == _TIMER_ACTIVE
+            finishes = _timestamp(state.attributes.get("finishes_at"))
+            if target is None or target <= now:
+                if running and not (
+                    finishes is not None and finishes - now <= _TIMER_FINISH_GRACE
+                ):
+                    _LOGGER.debug("[%s] timer %s: cancel", self.name, self.timer_id)
+                    await self._async_timer_call("cancel", {})
+                return
+            remaining = max(1, math.ceil(target - now))
+            if not running or finishes is None:
+                await self._async_timer_call("start", {"duration": remaining})
+                return
+            delta = target - finishes
+            if abs(delta) < _TIMER_TOLERANCE:
+                return
+            duration = dt_util.parse_duration(str(state.attributes.get("duration")))
+            if (
+                duration is not None
+                and remaining <= duration.total_seconds()
+                and await self._async_timer_call("change", {"duration": round(delta)})
+            ):
+                return
+            # Cannot be changed (longer than the running duration): restart.
+            await self._async_timer_call("start", {"duration": remaining})
+
+
+def _timestamp(value: Any) -> float | None:
+    """Return the epoch of an ISO datetime attribute, or None."""
+    if not isinstance(value, str) or (parsed := dt_util.parse_datetime(value)) is None:
+        return None
+    return parsed.timestamp()

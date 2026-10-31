@@ -9,20 +9,23 @@
           "seat_entity": "Sensor de tapa",
           "short_flush_entity": "Sensor de descarga corta",
           "flush_entity": "Sensor de descarga larga",
-          "fan_entity": "Extractor"
+          "fan_entity": "Extractor",
+          "timer_entity": "Temporizador (helper)"
         },
         "data_description": {
           "name": "Prefijo de los nombres de las entidades.",
           "seat_entity": "Sensor binario: on = tapa abierta.",
           "short_flush_entity": "Sensor binario opcional: on = descarga corta en curso.",
           "flush_entity": "Sensor binario opcional: on = descarga larga en curso.",
-          "fan_entity": "Interruptor o ventilador a encender y apagar."
+          "fan_entity": "Interruptor o ventilador a encender y apagar.",
+          "timer_entity": "Temporizador opcional que refleja el tiempo restante del ventilador."
         }
       }
     },
     "error": {
       "same_entity": "La tapa, la descarga corta y la descarga larga deben ser sensores distintos.",
-      "fan_in_use": "Este extractor ya está controlado por otra instancia de Extractor WC."
+      "fan_in_use": "Este extractor ya está controlado por otra instancia de Extractor WC.",
+      "timer_in_use": "Este temporizador ya lo usa otra instancia de WC Fan."
     }
   },
   "options": {
@@ -33,19 +36,22 @@
           "seat_entity": "Sensor de tapa",
           "short_flush_entity": "Sensor de descarga corta",
           "flush_entity": "Sensor de descarga larga",
-          "fan_entity": "Extractor"
+          "fan_entity": "Extractor",
+          "timer_entity": "Temporizador (helper)"
         },
         "data_description": {
           "seat_entity": "Sensor binario: on = tapa abierta.",
           "short_flush_entity": "Sensor binario opcional: on = descarga corta en curso.",
           "flush_entity": "Sensor binario opcional: on = descarga larga en curso.",
-          "fan_entity": "Interruptor o ventilador a encender y apagar."
+          "fan_entity": "Interruptor o ventilador a encender y apagar.",
+          "timer_entity": "Temporizador opcional que refleja el tiempo restante del ventilador."
         }
       }
     },
     "error": {
       "same_entity": "La tapa, la descarga corta y la descarga larga deben ser sensores distintos.",
-      "fan_in_use": "Este extractor ya está controlado por otra instancia de Extractor WC."
+      "fan_in_use": "Este extractor ya está controlado por otra instancia de Extractor WC.",
+      "timer_in_use": "Este temporizador ya lo usa otra instancia de WC Fan."
     }
   },
   "entity": {

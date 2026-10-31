@@ -9,20 +9,23 @@
           "seat_entity": "Seat lid sensor",
           "short_flush_entity": "Short flush sensor",
           "flush_entity": "Long flush sensor",
-          "fan_entity": "Fan"
+          "fan_entity": "Fan",
+          "timer_entity": "Timer helper"
         },
         "data_description": {
           "name": "Prefix of the entity names.",
           "seat_entity": "Binary sensor: on = lid open.",
           "short_flush_entity": "Optional binary sensor: on = short flush in progress.",
           "flush_entity": "Optional binary sensor: on = long flush in progress.",
-          "fan_entity": "Switch or fan to turn on and off."
+          "fan_entity": "Switch or fan to turn on and off.",
+          "timer_entity": "Optional timer helper mirroring the remaining time of the fan."
         }
       }
     },
     "error": {
       "same_entity": "Seat, short flush and long flush must be different sensors.",
-      "fan_in_use": "This fan is already driven by another WC Fan instance."
+      "fan_in_use": "This fan is already driven by another WC Fan instance.",
+      "timer_in_use": "This timer is already used by another WC Fan instance."
     }
   },
   "options": {
@@ -33,19 +36,22 @@
           "seat_entity": "Seat lid sensor",
           "short_flush_entity": "Short flush sensor",
           "flush_entity": "Long flush sensor",
-          "fan_entity": "Fan"
+          "fan_entity": "Fan",
+          "timer_entity": "Timer helper"
         },
         "data_description": {
           "seat_entity": "Binary sensor: on = lid open.",
           "short_flush_entity": "Optional binary sensor: on = short flush in progress.",
           "flush_entity": "Optional binary sensor: on = long flush in progress.",
-          "fan_entity": "Switch or fan to turn on and off."
+          "fan_entity": "Switch or fan to turn on and off.",
+          "timer_entity": "Optional timer helper mirroring the remaining time of the fan."
         }
       }
     },
     "error": {
       "same_entity": "Seat, short flush and long flush must be different sensors.",
-      "fan_in_use": "This fan is already driven by another WC Fan instance."
+      "fan_in_use": "This fan is already driven by another WC Fan instance.",
+      "timer_in_use": "This timer is already used by another WC Fan instance."
     }
   },
   "entity": {

@@ -16,6 +16,8 @@ CONF_SEAT: Final = "seat_entity"  # binary_sensor, on = seat lid open (required)
 CONF_FLUSH: Final = "flush_entity"  # binary_sensor, on = long flush in progress
 CONF_SHORT_FLUSH: Final = "short_flush_entity"  # binary_sensor, short flush
 CONF_FAN: Final = "fan_entity"  # switch or fan, on/off relay
+# v1.4: OPTIONAL timer helper (domain ``timer``) mirroring the remaining time.
+CONF_TIMER: Final = "timer_entity"
 
 # Flush kinds (v1.1).
 FLUSH_SHORT: Final = "short"

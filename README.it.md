@@ -3,7 +3,7 @@
 # Aeratore WC (WC Fan)
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/)
-![Versione](https://img.shields.io/badge/versione-1.3.0-blue)
+![Versione](https://img.shields.io/badge/versione-1.4.0-blue)
 
 🇬🇧 [Read in English](README.md)
 
@@ -47,6 +47,11 @@ Specifica completa: [SPEC.md](SPEC.md).
    `switch.<nome>_max_on_enabled` e si estende alla modalità manuale con
    `switch.<nome>_max_on_manual`.
 
+7. **Timer helper** (opzionale, v1.4): seleziona un helper `timer` esistente
+   (*Impostazioni → Dispositivi e servizi → Aiutanti → Timer*) e l'integrazione
+   vi riflette il tempo residuo dell'aeratore, così funzionano le card standard
+   dei timer e gli attributi `remaining` / `finishes_at`. Vedi *Timer helper*.
+
 ## Installazione
 
 1. HACS → ⋮ → *Repository personalizzati* → `https://github.com/dvbit/ha-wc-fan`,
@@ -65,6 +70,7 @@ Richiede Home Assistant **2025.6.0** o successivo.
 | Sensore scarico breve | `binary_sensor` | `on` = scarico breve in corso (opzionale) |
 | Sensore scarico lungo | `binary_sensor` | `on` = scarico lungo in corso (opzionale) |
 | Aeratore | `switch` o `fan` | l'aeratore da comandare (obbligatorio) |
+| Timer helper | `timer` | opzionale: riflette il tempo residuo, vedi sotto |
 
 Le entità si possono cambiare in seguito da **Configura** (options flow).
 I parametri di un sensore di scarico non configurato non vengono creati.
@@ -217,6 +223,36 @@ automation:
         data:
           message: "L'aeratore del bagno ha raggiunto il tempo massimo: controlla il sensore tavoletta."
 ```
+
+## Timer helper
+
+Campo opzionale *Timer helper* (dominio `timer`). L'integrazione lo comanda
+solo con i servizi documentati `timer.start`, `timer.change` e `timer.cancel`;
+la durata impostata nell'helper viene ignorata.
+
+- Aeratore **acceso** → `timer.start`, con fine alla scadenza del tempo massimo
+  di accensione (`max_on_time`). Con `max_on_enabled` off la fine non è nota
+  finché la tavoletta è aperta: il timer parte all'inizio del countdown.
+- Inizio del countdown → `timer.change` perché il timer finisca alla fine del
+  countdown (mai oltre il tempo massimo di accensione).
+- Cambio di un parametro (es. tempo base, tempo massimo) → `timer.change` con
+  la differenza. Un timer non può superare la durata con cui è partito: in quel
+  caso viene riavviato con `timer.start`.
+- Sessione terminata prima (OFF manuale, spegnimento forzato, automazione
+  disabilitata) → `timer.cancel`. Alla fine normale del countdown il timer
+  termina da solo e scatta `timer.finished`.
+- Modalità manuale: il timer segue il tempo massimo solo se `max_on_manual` è on.
+
+Card per la dashboard:
+
+```yaml
+type: tile
+entity: timer.aeratore_bagno
+name: Tempo residuo aeratore
+```
+
+Ogni helper può riflettere una sola istanza. Un helper non disponibile viene
+segnalato una volta con un warning e saltato.
 
 ## Esempi di timer
 

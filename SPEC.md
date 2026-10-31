@@ -173,3 +173,23 @@ Livello debug: ogni transizione di stato con evento causa, D\_t, S, T calcolato.
   `max_on_time`, `manual_off`, `disabled`) sul sensore di stato; log INFO allo
   spegnimento forzato, DEBUG al ricalcolo della scadenza.
 - P8 «Tempo massimo» invariato: limita solo il countdown.
+
+---
+
+## Appendice — Requisito consolidato v1.4.0 (31/10/2026)
+
+- **Timer helper opzionale** (`timer_entity`, entità del dominio `timer`),
+  selezionabile in config flow e options flow; un helper per istanza.
+- L'integrazione lo comanda solo con `timer.start`, `timer.change`,
+  `timer.cancel` (servizi documentati); la durata propria dell'helper è ignorata.
+- **Fine attesa** = scadenza `max_on_end` quando l'aeratore è acceso (se il
+  limite è attivo); in `countdown` il minore tra fine countdown e `max_on_end`;
+  in `manuale` solo con `max_on_manual`.
+- Avvio all'accensione dell'aeratore; aggiornamento con `timer.change`
+  (differenza) all'inizio del countdown e a ogni cambio di parametri; se la
+  nuova durata supera quella con cui il timer è partito, `timer.start`.
+- `timer.cancel` quando la sessione termina in anticipo; a fine countdown
+  naturale il timer termina da solo (`timer.finished`).
+- Con limite disattivato e tavoletta aperta la fine non è nota: il timer parte
+  all'inizio del countdown.
+- Helper non disponibile: warning una volta, nessun effetto sul funzionamento.

@@ -9,20 +9,23 @@
           "seat_entity": "Deckelsensor",
           "short_flush_entity": "Sensor Kurzspülung",
           "flush_entity": "Sensor Langspülung",
-          "fan_entity": "Lüfter"
+          "fan_entity": "Lüfter",
+          "timer_entity": "Timer-Helfer"
         },
         "data_description": {
           "name": "Präfix der Entitätsnamen.",
           "seat_entity": "Binärsensor: on = Deckel offen.",
           "short_flush_entity": "Optionaler Binärsensor: on = Kurzspülung läuft.",
           "flush_entity": "Optionaler Binärsensor: on = Langspülung läuft.",
-          "fan_entity": "Schalter oder Ventilator zum Ein- und Ausschalten."
+          "fan_entity": "Schalter oder Ventilator zum Ein- und Ausschalten.",
+          "timer_entity": "Optionaler Timer, der die Restzeit des Lüfters widerspiegelt."
         }
       }
     },
     "error": {
       "same_entity": "Deckel, Kurzspülung und Langspülung müssen verschiedene Sensoren sein.",
-      "fan_in_use": "Dieser Lüfter wird bereits von einer anderen WC-Lüfter-Instanz gesteuert."
+      "fan_in_use": "Dieser Lüfter wird bereits von einer anderen WC-Lüfter-Instanz gesteuert.",
+      "timer_in_use": "Dieser Timer wird bereits von einer anderen WC-Fan-Instanz verwendet."
     }
   },
   "options": {
@@ -33,19 +36,22 @@
           "seat_entity": "Deckelsensor",
           "short_flush_entity": "Sensor Kurzspülung",
           "flush_entity": "Sensor Langspülung",
-          "fan_entity": "Lüfter"
+          "fan_entity": "Lüfter",
+          "timer_entity": "Timer-Helfer"
         },
         "data_description": {
           "seat_entity": "Binärsensor: on = Deckel offen.",
           "short_flush_entity": "Optionaler Binärsensor: on = Kurzspülung läuft.",
           "flush_entity": "Optionaler Binärsensor: on = Langspülung läuft.",
-          "fan_entity": "Schalter oder Ventilator zum Ein- und Ausschalten."
+          "fan_entity": "Schalter oder Ventilator zum Ein- und Ausschalten.",
+          "timer_entity": "Optionaler Timer, der die Restzeit des Lüfters widerspiegelt."
         }
       }
     },
     "error": {
       "same_entity": "Deckel, Kurzspülung und Langspülung müssen verschiedene Sensoren sein.",
-      "fan_in_use": "Dieser Lüfter wird bereits von einer anderen WC-Lüfter-Instanz gesteuert."
+      "fan_in_use": "Dieser Lüfter wird bereits von einer anderen WC-Lüfter-Instanz gesteuert.",
+      "timer_in_use": "Dieser Timer wird bereits von einer anderen WC-Fan-Instanz verwendet."
     }
   },
   "entity": {

@@ -32,6 +32,7 @@ from .const import (
     CONF_FLUSH,
     CONF_SEAT,
     CONF_SHORT_FLUSH,
+    CONF_TIMER,
     DOMAIN,
     FAN_DOMAINS,
 )
@@ -49,6 +50,8 @@ ENTITIES_SCHEMA = vol.Schema(
         vol.Required(CONF_FAN): EntitySelector(
             EntitySelectorConfig(domain=list(FAN_DOMAINS))
         ),
+        # v1.4: optional timer helper that mirrors the remaining fan time.
+        vol.Optional(CONF_TIMER): EntitySelector(EntitySelectorConfig(domain="timer")),
     }
 )
 USER_SCHEMA = vol.Schema({vol.Required(CONF_NAME): TextSelector()}).extend(
@@ -57,12 +60,13 @@ USER_SCHEMA = vol.Schema({vol.Required(CONF_NAME): TextSelector()}).extend(
 
 
 def _entities(user_input: dict[str, Any]) -> dict[str, Any]:
-    """Return the four entity keys, with ``None`` for an empty optional one."""
+    """Return the entity keys, with ``None`` for an empty optional one."""
     return {
         CONF_SEAT: user_input[CONF_SEAT],
         CONF_SHORT_FLUSH: user_input.get(CONF_SHORT_FLUSH) or None,
         CONF_FLUSH: user_input.get(CONF_FLUSH) or None,
         CONF_FAN: user_input[CONF_FAN],
+        CONF_TIMER: user_input.get(CONF_TIMER) or None,
     }
 
 
@@ -79,11 +83,14 @@ def _validate(
         # One fan cannot be driven by two instances (they would fight).
         for entry in hass.config_entries.async_entries(DOMAIN):
             config = {**entry.data, **entry.options}
-            if (
-                entry.entry_id != current_entry_id
-                and config.get(CONF_FAN) == data[CONF_FAN]
-            ):
+            if entry.entry_id == current_entry_id:
+                continue
+            if config.get(CONF_FAN) == data[CONF_FAN]:
                 errors[CONF_FAN] = "fan_in_use"
+                break
+            # v1.4: a timer helper mirrors one instance only.
+            if data[CONF_TIMER] and config.get(CONF_TIMER) == data[CONF_TIMER]:
+                errors[CONF_TIMER] = "timer_in_use"
                 break
     if errors:
         _LOGGER.error("Invalid configuration %s: %s", data, errors)

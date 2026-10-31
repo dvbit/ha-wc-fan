@@ -9,20 +9,23 @@
           "seat_entity": "Sensore tavoletta",
           "short_flush_entity": "Sensore scarico breve",
           "flush_entity": "Sensore scarico lungo",
-          "fan_entity": "Aeratore"
+          "fan_entity": "Aeratore",
+          "timer_entity": "Timer helper"
         },
         "data_description": {
           "name": "Prefisso dei nomi delle entità.",
           "seat_entity": "Sensore binario: on = tavoletta aperta.",
           "short_flush_entity": "Sensore binario opzionale: on = scarico breve in corso.",
           "flush_entity": "Sensore binario opzionale: on = scarico lungo in corso.",
-          "fan_entity": "Switch o ventola da accendere e spegnere."
+          "fan_entity": "Switch o ventola da accendere e spegnere.",
+          "timer_entity": "Timer opzionale che riflette il tempo residuo dell'aeratore."
         }
       }
     },
     "error": {
       "same_entity": "Tavoletta, scarico breve e scarico lungo devono essere sensori diversi.",
-      "fan_in_use": "Questo aeratore è già comandato da un'altra istanza di Aeratore WC."
+      "fan_in_use": "Questo aeratore è già comandato da un'altra istanza di Aeratore WC.",
+      "timer_in_use": "Questo timer è già usato da un'altra istanza di Aeratore WC."
     }
   },
   "options": {
@@ -33,19 +36,22 @@
           "seat_entity": "Sensore tavoletta",
           "short_flush_entity": "Sensore scarico breve",
           "flush_entity": "Sensore scarico lungo",
-          "fan_entity": "Aeratore"
+          "fan_entity": "Aeratore",
+          "timer_entity": "Timer helper"
         },
         "data_description": {
           "seat_entity": "Sensore binario: on = tavoletta aperta.",
           "short_flush_entity": "Sensore binario opzionale: on = scarico breve in corso.",
           "flush_entity": "Sensore binario opzionale: on = scarico lungo in corso.",
-          "fan_entity": "Switch o ventola da accendere e spegnere."
+          "fan_entity": "Switch o ventola da accendere e spegnere.",
+          "timer_entity": "Timer opzionale che riflette il tempo residuo dell'aeratore."
         }
       }
     },
     "error": {
       "same_entity": "Tavoletta, scarico breve e scarico lungo devono essere sensori diversi.",
-      "fan_in_use": "Questo aeratore è già comandato da un'altra istanza di Aeratore WC."
+      "fan_in_use": "Questo aeratore è già comandato da un'altra istanza di Aeratore WC.",
+      "timer_in_use": "Questo timer è già usato da un'altra istanza di Aeratore WC."
     }
   },
   "entity": {

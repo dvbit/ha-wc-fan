@@ -3,7 +3,7 @@
 # WC Fan
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/)
-![Version](https://img.shields.io/badge/version-1.3.0-blue)
+![Version](https://img.shields.io/badge/version-1.4.0-blue)
 
 🇮🇹 [Leggi in italiano](README.it.md)
 
@@ -42,6 +42,11 @@ Full specification: [SPEC.md](SPEC.md).
    opening or flush. It can be disabled with `switch.<name>_max_on_enabled`,
    and extended to manual mode with `switch.<name>_max_on_manual`.
 
+7. **Timer helper** (optional, v1.4): select an existing `timer` helper
+   (*Settings → Devices & services → Helpers → Timer*) and the integration
+   mirrors the remaining fan time on it, so the standard timer cards and
+   `remaining` / `finishes_at` attributes work. See *Timer helper* below.
+
 ## Installation
 
 1. HACS → ⋮ → *Custom repositories* → `https://github.com/dvbit/ha-wc-fan`,
@@ -60,6 +65,7 @@ Requires Home Assistant **2025.6.0** or newer.
 | Short flush sensor | `binary_sensor` | `on` = short flush in progress (optional) |
 | Long flush sensor | `binary_sensor` | `on` = long flush in progress (optional) |
 | Fan | `switch` or `fan` | the fan to drive (required) |
+| Timer helper | `timer` | optional: mirrors the remaining time, see below |
 
 The entities can be changed later from **Configure** (options flow).
 The parameters of a flush sensor that is not configured are not created.
@@ -208,6 +214,37 @@ automation:
         data:
           message: "The bathroom fan reached its maximum on-time: check the lid sensor."
 ```
+
+## Timer helper
+
+Optional field *Timer helper* (domain `timer`). The integration drives it only
+through the documented services `timer.start`, `timer.change` and
+`timer.cancel`; the duration set in the helper itself is ignored.
+
+- Fan turned **on** → `timer.start`, ending at the maximum on-time deadline
+  (`max_on_time`). With `max_on_enabled` off the end is unknown while the lid
+  is open: the timer starts when the countdown starts.
+- Countdown starts → `timer.change` so that the timer ends at the countdown end
+  (never later than the maximum on-time).
+- A parameter change (e.g. base time, maximum on-time) → `timer.change` with
+  the difference. A timer cannot grow beyond its running duration: in that case
+  it is restarted with `timer.start`.
+- Session ends early (manual OFF, forced OFF, automation disabled) →
+  `timer.cancel`. At the normal end of the countdown the timer finishes by
+  itself, so `timer.finished` is fired.
+- Manual mode: the timer follows the maximum on-time only if
+  `max_on_manual` is on.
+
+Dashboard card:
+
+```yaml
+type: tile
+entity: timer.bathroom_fan
+name: Fan remaining time
+```
+
+Each timer helper can mirror one instance only. A helper that is not available
+is logged once as a warning and skipped.
 
 ## Timer examples
 

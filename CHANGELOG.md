@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.0 — 2026-10-31
+
+- New optional **timer helper** (`timer_entity`): the remaining fan time is
+  mirrored on a standard `timer` entity through `timer.start`, `timer.change`
+  and `timer.cancel`. Started when the fan turns on, updated at the countdown
+  start and on parameter changes, cancelled when the session ends early.
+- Existing configuration is unchanged (the field is optional).
+
 ## 1.3.0 — 2026-10-31
 
 - Documentation only: README (EN/IT) now has timer examples with the computed
