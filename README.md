@@ -3,7 +3,7 @@
 # WC Fan
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/)
-![Version](https://img.shields.io/badge/version-1.2.0-blue)
+![Version](https://img.shields.io/badge/version-1.3.0-blue)
 
 🇮🇹 [Leggi in italiano](README.it.md)
 
@@ -208,6 +208,54 @@ automation:
         data:
           message: "The bathroom fan reached its maximum on-time: check the lid sensor."
 ```
+
+## Timer examples
+
+All values use the **defaults** (P1 10 s, P2 120 s, P3 0.5, P4 1200 s, P5s 30 s,
+P6s 2, P5 60 s, P6 2, P7 120 s, P8 1200 s, maximum on-time 60 min) and were
+computed with the integration's own state machine. `T` is how long the fan keeps
+running **after** the lid is closed and the last flush has ended.
+
+```
+T = clamp( 120 + 0.5 · min(D_t, 1200) + Σ_short (30 + 2·d) + Σ_long (60 + 2·d), 120, 1200 )
+```
+
+### Different lid times and flushes
+
+| # | Lid open (D_t) | Flushes | Calculation | T |
+| --- | --- | --- | --- | --- |
+| 1 | 30 s | none | 120 + 15 | **135 s** (2 min 15 s) |
+| 2 | 30 s | short 3 s | 120 + 15 + (30 + 6) | **171 s** (2 min 51 s) |
+| 3 | 2 min | long 6 s | 120 + 60 + (60 + 12) | **252 s** (4 min 12 s) |
+| 4 | 5 min | long 6 s + short 3 s | 120 + 150 + (60 + 12) + (30 + 6) | **378 s** (6 min 18 s) |
+| 5 | 10 min | 2 × long 6 s | 120 + 300 + 2 · (60 + 12) | **564 s** (9 min 24 s) |
+| 6 | 25 min | long 8 s | 120 + 600 *(D_t capped by P4)* + (60 + 16) | **796 s** (13 min 16 s) |
+| 7 | 30 min | 10 × long 8 s | 120 + 600 + 10 · (60 + 16) = 1480 → clamped by P8 | **1200 s** (20 min) |
+
+Without flush sensors only the first two terms count (rows 1, 3 and 5 would
+give 135 s, 180 s and 420 s). The fan switches on 10 s after the lid opens (P1),
+so in row 4 it runs for 5 min − 10 s + 6 min 18 s in total.
+
+![T versus lid open time](docs/formula-curves.png)
+
+### Lid left open: with and without the maximum on-time
+
+The fan turns on at 10 s and the lid never closes (or closes late). Maximum
+on-time = 60 min (`max_on_time`), counted from when the fan was switched on,
+**countdown included**.
+
+| Case | `max_on_enabled` | Fan switched off | `last_stop_reason` |
+| --- | --- | --- | --- |
+| Lid open 3 h | off | 3 h 12 min after opening (3 h + T = 12 min) | `countdown` |
+| Lid open 3 h | on | **60 min** after the fan started (at 60 min 10 s) | `max_on_time` |
+| Lid open 50 min | off | 62 min (50 min + T = 12 min) | `countdown` |
+| Lid open 50 min | on | **60 min 10 s**: the 12 min countdown is cut | `max_on_time` |
+| Lid open 20 min | on | 32 min (20 min + T = 12 min), limit not reached | `countdown` |
+
+After a forced switch-off the session ends: the fan comes back only on a new
+lid opening or flush, even if the lid is still open.
+
+![Lid left open](docs/max-on-time.png)
 
 ## Logging
 

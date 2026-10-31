@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0 — 2026-10-31
+
+- Documentation only: README (EN/IT) now has timer examples with the computed
+  values of the formula, lid-left-open cases with and without the maximum
+  on-time, and two charts (`docs/`).
+
 ## 1.2.0 — 2026-10-31
 
 - New **maximum on-time**: the fan is switched off after `max_on_time` minutes

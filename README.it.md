@@ -3,7 +3,7 @@
 # Aeratore WC (WC Fan)
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/)
-![Versione](https://img.shields.io/badge/versione-1.2.0-blue)
+![Versione](https://img.shields.io/badge/versione-1.3.0-blue)
 
 🇬🇧 [Read in English](README.md)
 
@@ -217,6 +217,55 @@ automation:
         data:
           message: "L'aeratore del bagno ha raggiunto il tempo massimo: controlla il sensore tavoletta."
 ```
+
+## Esempi di timer
+
+Tutti i valori usano i **default** (P1 10 s, P2 120 s, P3 0,5, P4 1200 s,
+P5b 30 s, P6b 2, P5 60 s, P6 2, P7 120 s, P8 1200 s, tempo massimo di
+accensione 60 min) e sono calcolati con la macchina a stati dell'integrazione.
+`T` è per quanto l'aeratore continua a girare **dopo** la chiusura della
+tavoletta e la fine dell'ultimo scarico.
+
+```
+T = clamp( 120 + 0,5 · min(D_t, 1200) + Σ_brevi (30 + 2·d) + Σ_lunghi (60 + 2·d), 120, 1200 )
+```
+
+### Diversi tempi di tavoletta e scarichi
+
+| # | Tavoletta aperta (D_t) | Scarichi | Calcolo | T |
+| --- | --- | --- | --- | --- |
+| 1 | 30 s | nessuno | 120 + 15 | **135 s** (2 min 15 s) |
+| 2 | 30 s | breve 3 s | 120 + 15 + (30 + 6) | **171 s** (2 min 51 s) |
+| 3 | 2 min | lungo 6 s | 120 + 60 + (60 + 12) | **252 s** (4 min 12 s) |
+| 4 | 5 min | lungo 6 s + breve 3 s | 120 + 150 + (60 + 12) + (30 + 6) | **378 s** (6 min 18 s) |
+| 5 | 10 min | 2 × lungo 6 s | 120 + 300 + 2 · (60 + 12) | **564 s** (9 min 24 s) |
+| 6 | 25 min | lungo 8 s | 120 + 600 *(D_t limitato da P4)* + (60 + 16) | **796 s** (13 min 16 s) |
+| 7 | 30 min | 10 × lungo 8 s | 120 + 600 + 10 · (60 + 16) = 1480 → limitato da P8 | **1200 s** (20 min) |
+
+Senza sensori di scarico contano solo i primi due termini (righe 1, 3 e 5
+darebbero 135 s, 180 s e 420 s). L'aeratore si accende 10 s dopo l'apertura
+(P1): nella riga 4 resta acceso in tutto 5 min − 10 s + 6 min 18 s.
+
+![T in funzione del tempo di tavoletta](docs/formula-curves.png)
+
+### Tavoletta lasciata aperta: con e senza tempo massimo
+
+L'aeratore si accende a 10 s e la tavoletta non si chiude (o si chiude tardi).
+Tempo massimo di accensione = 60 min (`max_on_time`), contato dall'accensione
+dell'aeratore, **countdown compreso**.
+
+| Caso | `max_on_enabled` | Spegnimento | `last_stop_reason` |
+| --- | --- | --- | --- |
+| Tavoletta aperta 3 h | off | 3 h 12 min dopo l'apertura (3 h + T = 12 min) | `countdown` |
+| Tavoletta aperta 3 h | on | **60 min** dopo l'accensione (a 60 min 10 s) | `max_on_time` |
+| Tavoletta aperta 50 min | off | 62 min (50 min + T = 12 min) | `countdown` |
+| Tavoletta aperta 50 min | on | **60 min 10 s**: il countdown di 12 min viene troncato | `max_on_time` |
+| Tavoletta aperta 20 min | on | 32 min (20 min + T = 12 min), limite non raggiunto | `countdown` |
+
+Dopo uno spegnimento forzato la sessione termina: l'aeratore riparte solo con
+una nuova apertura o un nuovo scarico, anche se la tavoletta è ancora aperta.
+
+![Tavoletta lasciata aperta](docs/max-on-time.png)
 
 ## Log
 
