@@ -56,6 +56,11 @@ class WcFanStateSensor(WcFanEntity, SensorEntity):
                 round(d, 1) for d in engine.data.short_flushes or []
             ],
             "post_ventilation": round(engine.post_ventilation(), 1),
+            # v1.2: forced switch-off instant and reason of the last stop.
+            "max_on_end": (
+                end.isoformat() if (end := self.manager.max_on_end) else None
+            ),
+            "last_stop_reason": engine.data.last_stop_reason,
         }
 
 

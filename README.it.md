@@ -3,7 +3,7 @@
 # Aeratore WC (WC Fan)
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/)
-![Versione](https://img.shields.io/badge/versione-1.1.0-blue)
+![Versione](https://img.shields.io/badge/versione-1.2.0-blue)
 
 🇬🇧 [Read in English](README.md)
 
@@ -40,6 +40,12 @@ Specifica completa: [SPEC.md](SPEC.md).
    sessione.
 5. Accendendo l'aeratore **a mano** l'automazione si sospende (`manual`) finché
    l'aeratore non si spegne; spegnendolo **a mano** la sessione termina.
+6. **Tempo massimo di accensione** (sicurezza): in ogni caso l'aeratore si
+   spegne dopo `max_on_time` minuti dall'accensione, countdown compreso (per
+   esempio con un sensore tavoletta bloccato su aperto). La sessione termina e
+   ne serve una nuova apertura o un nuovo scarico. Si disattiva con
+   `switch.<nome>_max_on_enabled` e si estende alla modalità manuale con
+   `switch.<nome>_max_on_manual`.
 
 ## Installazione
 
@@ -83,7 +89,10 @@ seguono la lingua di Home Assistant.
 | `number.bagno_flush_extra` | 60 s | 0–600 | P5 extra scarico lungo |
 | `number.bagno_flush_factor` | 2 s/s | 0–10 | P6 fattore scarico lungo |
 | `number.bagno_min_time` | 120 s | 0–3600 | P7 tempo minimo |
-| `number.bagno_max_time` | 1200 s | 60–7200 | P8 tempo massimo |
+| `number.bagno_max_time` | 1200 s | 60–7200 | P8 tempo massimo (solo countdown) |
+| `number.bagno_max_on_time` | 60 min | 5–240 | tempo massimo di accensione |
+| `switch.bagno_max_on_enabled` | on | — | limite di accensione attivo |
+| `switch.bagno_max_on_manual` | off | — | limite anche in modalità manuale |
 | `sensor.bagno_state` | — | vedi sotto | §5 stato |
 | `sensor.bagno_expected_end` | — | timestamp, solo in `countdown` | §3 fine prevista |
 
@@ -93,7 +102,8 @@ Valori di `sensor.bagno_state` (tradotti nell'interfaccia): `idle` (inattivo),
 
 Attributi: `seat_total` (D_t, s), `flush_durations` (scarichi lunghi, s),
 `short_flush_durations` (scarichi brevi, s), `post_ventilation` (T della
-sessione corrente, s).
+sessione corrente, s), `max_on_end` (istante dello spegnimento forzato),
+`last_stop_reason` (`countdown`, `max_on_time`, `manual_off`, `disabled`).
 
 Tutti i valori sopravvivono al riavvio; una sessione interrotta viene ripresa (§8).
 
@@ -190,6 +200,22 @@ binario*) può ricavarla dall'angolo di inclinazione. *Stato*:
 
 ```jinja
 {{ has_value('sensor.vibrazione_wc_angle_x') }}
+```
+
+### Notifica quando il tempo massimo ha spento l'aeratore
+
+```yaml
+automation:
+  - alias: "Aeratore WC - spento per tempo massimo"
+    triggers:
+      - trigger: state
+        entity_id: sensor.bagno_state
+        attribute: last_stop_reason
+        to: "max_on_time"
+    actions:
+      - action: notify.notify
+        data:
+          message: "L'aeratore del bagno ha raggiunto il tempo massimo: controlla il sensore tavoletta."
 ```
 
 ## Log

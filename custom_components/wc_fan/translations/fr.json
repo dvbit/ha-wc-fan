@@ -79,6 +79,9 @@
       },
       "max_time": {
         "name": "Temps maximum"
+      },
+      "max_on_time": {
+        "name": "Durée maximale de marche"
       }
     },
     "sensor": {
@@ -104,6 +107,18 @@
           },
           "post_ventilation": {
             "name": "Durée de post-ventilation"
+          },
+          "max_on_end": {
+            "name": "Arrêt forcé"
+          },
+          "last_stop_reason": {
+            "name": "Motif du dernier arrêt",
+            "state": {
+              "countdown": "Fin du compte à rebours",
+              "max_on_time": "Durée maximale atteinte",
+              "manual_off": "Éteint manuellement",
+              "disabled": "Automatisation désactivée"
+            }
           }
         }
       },
@@ -114,6 +129,12 @@
     "switch": {
       "enabled": {
         "name": "Activé"
+      },
+      "max_on_enabled": {
+        "name": "Limite de durée maximale de marche"
+      },
+      "max_on_manual": {
+        "name": "Durée maximale de marche en mode manuel"
       }
     }
   }

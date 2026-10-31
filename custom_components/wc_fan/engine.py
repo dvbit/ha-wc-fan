@@ -22,6 +22,7 @@ from .const import (
     P_BASE_TIME,
     P_FLUSH_EXTRA,
     P_FLUSH_FACTOR,
+    P_MAX_ON_TIME,
     P_MAX_TIME,
     P_MIN_TIME,
     P_SEAT_CAP,
@@ -35,6 +36,10 @@ from .const import (
     STATE_MANUAL,
     STATE_WAITING,
     STATES,
+    STOP_COUNTDOWN,
+    STOP_DISABLED,
+    STOP_MANUAL_OFF,
+    STOP_MAX_ON,
 )
 
 # --- Normalized entity states -------------------------------------------------
@@ -72,6 +77,7 @@ PARAM_SPECS: Final[dict[str, ParamSpec]] = {
     P_SHORT_FLUSH_FACTOR: ParamSpec(2, 0, 10, 0.1, "s/s"),  # P6b, short (v1.1)
     P_MIN_TIME: ParamSpec(120, 0, 3600, 1, "s"),  # P7
     P_MAX_TIME: ParamSpec(1200, 60, 7200, 1, "s"),  # P8
+    P_MAX_ON_TIME: ParamSpec(60, 5, 240, 1, "min"),  # v1.2: max fan on-time
 }
 
 
@@ -89,6 +95,10 @@ class Params:
     short_flush_factor: float = PARAM_SPECS[P_SHORT_FLUSH_FACTOR].default
     min_time: float = PARAM_SPECS[P_MIN_TIME].default
     max_time: float = PARAM_SPECS[P_MAX_TIME].default
+    # v1.2: maximum fan on-time (minutes) and its two switches.
+    max_on_time: float = PARAM_SPECS[P_MAX_ON_TIME].default
+    max_on_enabled: bool = True
+    max_on_manual: bool = False
 
 
 def compute_post_ventilation(
@@ -133,6 +143,8 @@ class SessionData:
     countdown_start: float | None = None  # instant of entering countdown
     countdown_end: float | None = None  # expected switch-off instant
     off_pending: bool = False  # §8: OFF issued, not yet confirmed by the fan
+    on_since: float | None = None  # v1.2: fan switched on (session or manual)
+    last_stop_reason: str | None = None  # v1.2: why the fan was last stopped
 
     def __post_init__(self) -> None:
         """Avoid shared mutable defaults for the flush lists."""
@@ -188,6 +200,22 @@ class WcFanEngine:
             self.data.short_flushes or [],
         )
 
+    @property
+    def max_on_end(self) -> float | None:
+        """v1.2: instant at which the fan is forced off, or None.
+
+        Counted from ``on_since`` (fan switched on) for the whole session,
+        countdown included; in manual mode only if ``max_on_manual`` is on.
+        """
+        p, d = self.params, self.data
+        if not p.max_on_enabled or d.on_since is None:
+            return None
+        if self.state in (STATE_ACTIVE, STATE_COUNTDOWN) or (
+            self.state == STATE_MANUAL and p.max_on_manual
+        ):
+            return d.on_since + p.max_on_time * 60
+        return None
+
     def _transition(self, new_state: str, cause: str) -> None:
         """Change state and trace it at debug level (§9)."""
         old = self.data.state
@@ -203,7 +231,7 @@ class WcFanEngine:
             [round(d, 1) for d in self.data.short_flushes or []],
         )
 
-    def _open_session(self) -> None:
+    def _open_session(self, now: float) -> None:
         """§4: the session starts when entering ``active``.
 
         ``seat_since`` is preserved so the opening that triggered the session
@@ -213,6 +241,7 @@ class WcFanEngine:
         self.data.flushes = []
         self.data.short_flushes = []
         self.data.p1_deadline = None
+        self.data.on_since = now  # v1.2: start of the max on-time count
         self._log.info("[%s] session opened, fan ON", self.name)
 
     def _close_session(self) -> None:
@@ -226,6 +255,7 @@ class WcFanEngine:
         self.data.p1_deadline = None
         self.data.countdown_start = None
         self.data.countdown_end = None
+        self.data.on_since = None
 
     def _maybe_start_countdown(self, now: float, cause: str) -> None:
         """§5 active: seat off AND flush off -> compute T, start countdown.
@@ -285,7 +315,9 @@ class WcFanEngine:
                 cmds.append(FAN_ON)
         elif state == STATE_MANUAL and fan != OFF:
             # §8: stay manual while the fan is (still) on.
+            on_since = self.data.on_since
             self._close_session()
+            self.data.on_since = on_since  # v1.2: keep the manual on instant
             self._transition(STATE_MANUAL, "startup, fan still on")
         else:
             # waiting -> idle (§8), manual with fan off -> idle (§8),
@@ -293,6 +325,14 @@ class WcFanEngine:
             self._close_session()
             self.data.off_pending = self.data.off_pending and state == STATE_IDLE
             self._transition(STATE_IDLE, f"startup from {state}")
+
+        # v1.2: sessions persisted by older versions have no on_since: count
+        # from now. Then apply a max on-time already exceeded while HA was down.
+        if self.state in (STATE_ACTIVE, STATE_COUNTDOWN, STATE_MANUAL):
+            if self.data.on_since is None:
+                self.data.on_since = now
+            if expired := self.max_on_expired(now):
+                cmds = expired
 
         self._log.info(
             "[%s] started in state %s (seat=%s short=%s long=%s fan=%s)",
@@ -417,7 +457,7 @@ class WcFanEngine:
         if self.state in (STATE_IDLE, STATE_WAITING):
             # §5 idle/waiting + flush rising: cancel P1, fan ON, open session.
             # In waiting the opening in progress (seat_since) counts in D_t.
-            self._open_session()
+            self._open_session(now)
             self._transition(STATE_ACTIVE, "flush started")
             return [FAN_ON]
         if self.state == STATE_COUNTDOWN:
@@ -447,7 +487,7 @@ class WcFanEngine:
             self.data.p1_deadline = None
             self._transition(STATE_IDLE, "P1 expired, seat not open")
             return []
-        self._open_session()
+        self._open_session(now)
         self._transition(STATE_ACTIVE, "P1 expired, seat still open")
         return [FAN_ON]
 
@@ -459,8 +499,30 @@ class WcFanEngine:
             return []
         self._close_session()
         self.data.off_pending = True
+        self.data.last_stop_reason = STOP_COUNTDOWN
         self._transition(STATE_IDLE, "countdown expired")
         self._log.info("[%s] session closed, fan OFF", self.name)
+        return [FAN_OFF]
+
+    def max_on_expired(self, now: float) -> list[str]:
+        """v1.2: maximum on-time reached -> fan OFF, close session, idle.
+
+        Applies in active/countdown, and in manual mode when enabled. A new
+        session needs a new rising edge (same rule as a manual OFF, §6).
+        """
+        end = self.max_on_end
+        if end is None or now + 0.5 < end:
+            return []
+        old = self.state
+        self._close_session()
+        self.data.off_pending = True
+        self.data.last_stop_reason = STOP_MAX_ON
+        self._transition(STATE_IDLE, f"max on-time reached in {old}")
+        self._log.info(
+            "[%s] max on-time (%s min) reached: fan OFF",
+            self.name,
+            self.params.max_on_time,
+        )
         return [FAN_OFF]
 
     # --------------------------------------------------------------- fan events
@@ -483,6 +545,7 @@ class WcFanEngine:
             if new == OFF:
                 # §6: manual mode ends when the fan goes off for any cause.
                 self._close_session()
+                self.data.last_stop_reason = STOP_MANUAL_OFF
                 self._transition(STATE_IDLE, "fan off, manual mode ended")
             return []
         if not manual:
@@ -492,11 +555,13 @@ class WcFanEngine:
             # §6 manual OFF in any state: cancel timers, close session, idle.
             if self.state != STATE_IDLE:
                 self._close_session()
+                self.data.last_stop_reason = STOP_MANUAL_OFF
                 self._transition(STATE_IDLE, "manual fan OFF")
                 self._log.info("[%s] manual OFF, session closed", self.name)
             return []
         # §6 manual ON -> manual: sensors ignored, fan not commanded.
         self._close_session()
+        self.data.on_since = now  # v1.2: max on-time counted from here
         self.data.off_pending = False
         self._transition(STATE_MANUAL, "manual fan ON")
         self._log.info("[%s] manual ON, automation suspended", self.name)
@@ -519,8 +584,11 @@ class WcFanEngine:
     def set_enabled(self, enabled: bool, now: float) -> list[str]:
         """§7: enable switch toggled."""
         if not enabled and self.state != STATE_DISABLED:
+            fan_was_on = self.state in (STATE_ACTIVE, STATE_COUNTDOWN)
             self._close_session()
             self.data.off_pending = False
+            if fan_was_on:
+                self.data.last_stop_reason = STOP_DISABLED
             self._transition(STATE_DISABLED, "disabled by user")
             self._log.info("[%s] disabled", self.name)
         elif enabled and self.state == STATE_DISABLED:
@@ -529,7 +597,13 @@ class WcFanEngine:
         return []
 
     def params_changed(self, now: float) -> list[str]:
-        """§5: parameter change during countdown -> end = start + new T."""
+        """§5: parameter change during countdown -> end = start + new T.
+
+        v1.2: the max on-time deadline is derived from the parameters, so a
+        change that makes it already past switches the fan off at once.
+        """
+        if expired := self.max_on_expired(now):
+            return expired
         d = self.data
         if self.state != STATE_COUNTDOWN or d.countdown_start is None:
             return []

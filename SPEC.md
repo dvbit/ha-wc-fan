@@ -149,3 +149,27 @@ Livello debug: ogni transizione di stato con evento causa, D\_t, S, T calcolato.
   lungo; entity_id, valori e sessione persistita invariati.
 - §5–§8 invariati: qualunque scarico accende subito l'aeratore e riprende il
   countdown.
+
+---
+
+## Appendice — Requisito consolidato v1.2.0 (31/10/2026)
+
+- **Tempo massimo di accensione** (`max_on_time`, number in **minuti**, default 60,
+  range 5–240, step 1, ripristinato al riavvio): conta dall'accensione
+  dell'aeratore (ingresso in `attivo`) per tutta la sessione, countdown
+  compreso; allo scadere aeratore OFF anche con tavoletta aperta o countdown in
+  corso.
+- Dopo lo spegnimento forzato la sessione si chiude → `idle`; nuova sessione
+  solo da un nuovo fronte di salita (come dopo un OFF manuale, §6).
+- **Switch** `max_on_enabled` (default on): abilita il limite.
+- **Switch** `max_on_manual` (default off): applica il limite anche in `manuale`,
+  contando dall'accensione manuale; allo scadere OFF → `idle`.
+- Modifica di `max_on_time` o degli switch durante una sessione: scadenza
+  ricalcolata dall'istante di accensione; se già superata, OFF immediato.
+- **Riavvio**: l'istante di accensione è persistito; limite superato a HA
+  spento → OFF all'avvio. Sessioni salvate da versioni precedenti contano
+  dall'avvio.
+- **Diagnostica**: attributi `max_on_end` e `last_stop_reason` (`countdown`,
+  `max_on_time`, `manual_off`, `disabled`) sul sensore di stato; log INFO allo
+  spegnimento forzato, DEBUG al ricalcolo della scadenza.
+- P8 «Tempo massimo» invariato: limita solo il countdown.

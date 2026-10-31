@@ -30,6 +30,9 @@
       },
       "max_time": {
         "default": "mdi:timer-plus-outline"
+      },
+      "max_on_time": {
+        "default": "mdi:timer-alert-outline"
       }
     },
     "sensor": {
@@ -53,6 +56,18 @@
         "default": "mdi:fan-auto",
         "state": {
           "off": "mdi:fan-off"
+        }
+      },
+      "max_on_enabled": {
+        "default": "mdi:timer-cog-outline",
+        "state": {
+          "off": "mdi:timer-off-outline"
+        }
+      },
+      "max_on_manual": {
+        "default": "mdi:hand-back-right-outline",
+        "state": {
+          "off": "mdi:hand-back-right-off-outline"
         }
       }
     }

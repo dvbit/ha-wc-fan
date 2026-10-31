@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.2.0 — 2026-10-31
+
+- New **maximum on-time**: the fan is switched off after `max_on_time` minutes
+  (default 60, 5–240) from when it was turned on, countdown included; the
+  session ends and a new rising edge is needed.
+- New switch `max_on_enabled` (default on) to enable/disable the limit.
+- New switch `max_on_manual` (default off) to apply the limit also when the
+  fan was turned on by hand.
+- New state sensor attributes `max_on_end` and `last_stop_reason`.
+- The fan-on instant is persisted: a limit exceeded while HA was down is
+  applied at startup. Existing configuration and values are kept.
+
 ## 1.1.0 — 2026-10-13
 
 - Flush sensors are now optional: the integration works with the seat only.

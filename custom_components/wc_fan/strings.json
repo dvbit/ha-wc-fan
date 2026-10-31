@@ -79,6 +79,9 @@
       },
       "max_time": {
         "name": "Maximum time"
+      },
+      "max_on_time": {
+        "name": "Maximum on-time"
       }
     },
     "sensor": {
@@ -104,6 +107,18 @@
           },
           "post_ventilation": {
             "name": "Post-ventilation time"
+          },
+          "max_on_end": {
+            "name": "Forced switch-off"
+          },
+          "last_stop_reason": {
+            "name": "Last stop reason",
+            "state": {
+              "countdown": "Countdown ended",
+              "max_on_time": "Maximum on-time reached",
+              "manual_off": "Turned off by hand",
+              "disabled": "Automation disabled"
+            }
           }
         }
       },
@@ -114,6 +129,12 @@
     "switch": {
       "enabled": {
         "name": "Enabled"
+      },
+      "max_on_enabled": {
+        "name": "Maximum on-time limit"
+      },
+      "max_on_manual": {
+        "name": "Maximum on-time in manual mode"
       }
     }
   }

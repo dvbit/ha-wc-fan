@@ -3,7 +3,7 @@
 # WC Fan
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/)
-![Version](https://img.shields.io/badge/version-1.1.0-blue)
+![Version](https://img.shields.io/badge/version-1.2.0-blue)
 
 🇮🇹 [Leggi in italiano](README.it.md)
 
@@ -36,6 +36,11 @@ Full specification: [SPEC.md](SPEC.md).
 4. A new opening or flush during the countdown resumes the same session.
 5. Turning the fan **on by hand** suspends the automation (`manual`) until the
    fan goes off; turning it **off by hand** ends the session.
+6. **Maximum on-time** (safety): whatever happens, the fan is switched off
+   after `max_on_time` minutes from when it was turned on, countdown included
+   (e.g. a lid sensor stuck open). The session ends and a new one needs a new
+   opening or flush. It can be disabled with `switch.<name>_max_on_enabled`,
+   and extended to manual mode with `switch.<name>_max_on_manual`.
 
 ## Installation
 
@@ -78,13 +83,18 @@ Example with name `Bathroom`:
 | `number.bathroom_flush_extra` | 60 s | 0–600 | P5 (long flush only) |
 | `number.bathroom_flush_factor` | 2 s/s | 0–10 | P6 (long flush only) |
 | `number.bathroom_min_time` | 120 s | 0–3600 | P7 |
-| `number.bathroom_max_time` | 1200 s | 60–7200 | P8 |
+| `number.bathroom_max_time` | 1200 s | 60–7200 | P8 (countdown only) |
+| `number.bathroom_max_on_time` | 60 min | 5–240 | maximum on-time |
+| `switch.bathroom_max_on_enabled` | on | — | maximum on-time limit active |
+| `switch.bathroom_max_on_manual` | off | — | limit also in manual mode |
 | `sensor.bathroom_state` | — | `idle`, `waiting`, `active`, `countdown`, `manual`, `disabled` | §5 |
 | `sensor.bathroom_expected_end` | — | timestamp, only in `countdown` | §3 |
 
 `sensor.bathroom_state` attributes: `seat_total` (D_t, s), `flush_durations`
 (long flushes, s), `short_flush_durations` (short flushes, s),
-`post_ventilation` (T for the current session, s).
+`post_ventilation` (T for the current session, s), `max_on_end` (forced
+switch-off instant), `last_stop_reason` (`countdown`, `max_on_time`,
+`manual_off`, `disabled`).
 
 All values survive a restart; an interrupted session is resumed (§8).
 
@@ -181,6 +191,22 @@ from the tilt angle. *State*:
 
 ```jinja
 {{ has_value('sensor.wc_vibration_angle_x') }}
+```
+
+### Notify when the maximum on-time stopped the fan
+
+```yaml
+automation:
+  - alias: "WC fan - stopped by maximum on-time"
+    triggers:
+      - trigger: state
+        entity_id: sensor.bathroom_state
+        attribute: last_stop_reason
+        to: "max_on_time"
+    actions:
+      - action: notify.notify
+        data:
+          message: "The bathroom fan reached its maximum on-time: check the lid sensor."
 ```
 
 ## Logging

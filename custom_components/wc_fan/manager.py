@@ -109,6 +109,8 @@ class WcFanManager:
         self._p1_at: float | None = None
         self._end_unsub: CALLBACK_TYPE | None = None
         self._end_at: float | None = None
+        self._max_on_unsub: CALLBACK_TYPE | None = None  # v1.2
+        self._max_on_at: float | None = None
 
     # ---------------------------------------------------------------- lifecycle
     async def async_load(self) -> None:
@@ -170,6 +172,7 @@ class WcFanManager:
         self._unsubs.clear()
         self._cancel_p1()
         self._cancel_end()
+        self._cancel_max_on()
         if self._started:
             await self._store.async_save(self.engine.as_dict())
         self._started = False
@@ -191,8 +194,14 @@ class WcFanManager:
         return _remove
 
     @callback
-    def set_param(self, key: str, value: float, *, restoring: bool = False) -> None:
-        """Update P1..P8 from a number entity (§3, §5 parameter change)."""
+    def set_param(
+        self, key: str, value: float | bool, *, restoring: bool = False
+    ) -> None:
+        """Update a parameter from a number/option switch (§3, §5, v1.2).
+
+        The new value is applied to T in countdown and to the max on-time
+        deadline (an already exceeded deadline switches the fan off at once).
+        """
         setattr(self.params, key, value)
         if restoring or not self._started:
             return
@@ -301,7 +310,7 @@ class WcFanManager:
     # ------------------------------------------------------------------ timers
     @callback
     def _sync_timers(self) -> None:
-        """Reschedule the P1 / countdown timers when the deadlines change."""
+        """Reschedule the P1 / countdown / max on-time timers on change."""
         p1 = self.engine.data.p1_deadline
         if p1 != self._p1_at:
             self._cancel_p1()
@@ -317,6 +326,22 @@ class WcFanManager:
                 self._end_at = end
                 self._end_unsub = async_track_point_in_utc_time(
                     self.hass, self._async_end_fired, dt_util.utc_from_timestamp(end)
+                )
+        # v1.2: the max on-time deadline is derived from on_since + parameters.
+        max_on = self.engine.max_on_end
+        if max_on != self._max_on_at:
+            self._cancel_max_on()
+            if max_on is not None:
+                self._max_on_at = max_on
+                self._max_on_unsub = async_track_point_in_utc_time(
+                    self.hass,
+                    self._async_max_on_fired,
+                    dt_util.utc_from_timestamp(max_on),
+                )
+                _LOGGER.debug(
+                    "[%s] max on-time deadline: %s",
+                    self.name,
+                    dt_util.utc_from_timestamp(max_on).isoformat(),
                 )
 
     @callback
@@ -334,6 +359,13 @@ class WcFanManager:
         self._end_at = None
 
     @callback
+    def _cancel_max_on(self) -> None:
+        if self._max_on_unsub is not None:
+            self._max_on_unsub()
+        self._max_on_unsub = None
+        self._max_on_at = None
+
+    @callback
     def _async_p1_fired(self, now: datetime) -> None:
         """P1 timer expired (§5 waiting)."""
         self._p1_unsub = None
@@ -346,3 +378,16 @@ class WcFanManager:
         self._end_unsub = None
         self._end_at = None
         self._apply(self.engine.countdown_expired(now.timestamp()))
+
+    @callback
+    def _async_max_on_fired(self, now: datetime) -> None:
+        """Maximum fan on-time reached (v1.2)."""
+        self._max_on_unsub = None
+        self._max_on_at = None
+        self._apply(self.engine.max_on_expired(now.timestamp()))
+
+    @property
+    def max_on_end(self) -> datetime | None:
+        """v1.2: instant of the forced switch-off, or None."""
+        end = self.engine.max_on_end
+        return None if end is None else dt_util.utc_from_timestamp(end)

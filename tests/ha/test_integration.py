@@ -288,3 +288,55 @@ async def test_options_remove_flush_removes_numbers(hass: HomeAssistant) -> None
     registry = er.async_get(hass)
     assert registry.async_get("number.bagno_flush_extra") is None
     assert entry.runtime_data.flush_ids == {}
+
+
+# ----------------------------------------------------------------- v1.2 tests
+async def test_max_on_time_entities_and_stop(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
+    """v1.2: number in minutes, two switches, forced OFF after the limit."""
+    _, calls = await _setup(hass, {CONF_SEAT: SEAT, CONF_FAN: FAN})
+    number = hass.states.get("number.bagno_max_on_time")
+    assert float(number.state) == 60
+    assert number.attributes["unit_of_measurement"] == "min"
+    assert hass.states.get("switch.bagno_max_on_enabled").state == "on"
+    assert hass.states.get("switch.bagno_max_on_manual").state == "off"
+
+    await hass.services.async_call(
+        "number",
+        "set_value",
+        {"entity_id": "number.bagno_max_on_time", "value": 5},
+        blocking=True,
+    )
+    hass.states.async_set(SEAT, "on")
+    await hass.async_block_till_done()
+    await _tick(hass, freezer, 11)
+    assert calls == ["turn_on"]
+    assert hass.states.get("sensor.bagno_state").attributes["max_on_end"]
+    await _tick(hass, freezer, 300)
+    assert calls == ["turn_on", "turn_off"]
+    state = hass.states.get("sensor.bagno_state")
+    assert state.state == "idle"
+    assert state.attributes["last_stop_reason"] == "max_on_time"
+
+
+async def test_max_on_manual_mode(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
+    """v1.2: manual ON is limited only when max_on_manual is on."""
+    _, calls = await _setup(hass, {CONF_SEAT: SEAT, CONF_FAN: FAN})
+    await hass.services.async_call(
+        "switch", "turn_on", {"entity_id": "switch.bagno_max_on_manual"}, blocking=True
+    )
+    await hass.services.async_call(
+        "number",
+        "set_value",
+        {"entity_id": "number.bagno_max_on_time", "value": 5},
+        blocking=True,
+    )
+    hass.states.async_set(FAN, "on", context=Context())
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.bagno_state").state == "manual"
+    await _tick(hass, freezer, 301)
+    assert calls == ["turn_off"]
+    assert hass.states.get("sensor.bagno_state").state == "idle"

@@ -313,3 +313,90 @@ def test_v10_store_compatible() -> None:
     eng.start(saved, OFF, NA, OFF, ON, True, 100)
     assert eng.state == STATE_COUNTDOWN
     assert eng.data.short_flushes == [] and eng.post_ventilation() == 190
+
+
+# ----------------------------------------------------------------- v1.2 tests
+def test_max_on_time_active_session() -> None:
+    """v1.2: forced OFF after max_on_time minutes, seat still open."""
+    eng = make(max_on_time=5)
+    eng.seat_event(ON, 0)
+    assert eng.p1_expired(10) == [FAN_ON]
+    assert eng.max_on_end == 10 + 300
+    assert eng.max_on_expired(200) == []
+    assert eng.max_on_expired(310) == [FAN_OFF]
+    assert eng.state == STATE_IDLE
+    assert eng.data.last_stop_reason == "max_on_time"
+    # Seat still open: no new session without a new rising edge.
+    assert eng.p1_expired(400) == []
+    eng.seat_event(OFF, 500)
+    assert eng.state == STATE_IDLE
+    eng.seat_event(ON, 510)
+    assert eng.state == STATE_WAITING
+
+
+def test_max_on_time_counts_countdown() -> None:
+    """v1.2: the limit includes the countdown."""
+    eng = make(max_on_time=5, max_time=7200, base_time=1800)
+    eng.flush_event(FLUSH_LONG, ON, 0)
+    eng.flush_event(FLUSH_LONG, OFF, 10)
+    assert eng.state == STATE_COUNTDOWN
+    assert eng.data.countdown_end > 300
+    assert eng.max_on_expired(300) == [FAN_OFF]
+    assert eng.state == STATE_IDLE
+
+
+def test_max_on_disabled_and_param_change() -> None:
+    """v1.2: switch off -> no deadline; lowering the limit can stop at once."""
+    eng = make(max_on_enabled=False)
+    eng.flush_event(FLUSH_LONG, ON, 0)
+    assert eng.max_on_end is None
+    eng.params.max_on_enabled = True
+    assert eng.params_changed(100) == []
+    assert eng.max_on_end == 3600
+    eng.params.max_on_time = 1
+    assert eng.params_changed(100) == [FAN_OFF]
+    assert eng.data.last_stop_reason == "max_on_time"
+
+
+def test_max_on_manual_switch() -> None:
+    """v1.2: in manual mode the limit applies only if max_on_manual is on."""
+    eng = make(max_on_time=5)
+    eng.fan_event(OFF, ON, True, 100)
+    assert eng.state == STATE_MANUAL
+    assert eng.max_on_end is None
+    eng.params.max_on_manual = True
+    assert eng.max_on_end == 400
+    assert eng.max_on_expired(400) == [FAN_OFF]
+    assert eng.state == STATE_IDLE
+    assert eng.fan_event(ON, OFF, False, 401) == []  # our own OFF echoed
+
+
+def test_max_on_restart_expired_and_old_store() -> None:
+    """v1.2: exceeded while HA was down -> OFF; old stores count from now."""
+    base = make(max_on_time=5)
+    base.seat_event(ON, 0)
+    base.p1_expired(10)
+    saved = base.as_dict()
+    eng = WcFanEngine("r", Params(max_on_time=5), LOG)
+    assert eng.start(saved, ON, OFF, OFF, ON, True, 1000) == [FAN_OFF]
+    assert eng.state == STATE_IDLE
+    old = {k: v for k, v in saved.items() if k != "on_since"}
+    eng = WcFanEngine("r", Params(max_on_time=5), LOG)
+    assert eng.start(old, ON, OFF, OFF, ON, True, 1000) == []
+    assert eng.max_on_end == 1300
+
+
+def test_stop_reasons() -> None:
+    """v1.2: last_stop_reason for countdown, manual OFF and disable."""
+    eng = make()
+    eng.flush_event(FLUSH_LONG, ON, 0)
+    eng.flush_event(FLUSH_LONG, OFF, 1)
+    eng.countdown_expired(10000)
+    assert eng.data.last_stop_reason == "countdown"
+    eng.flush_event(FLUSH_LONG, ON, 20000)
+    eng.fan_event(ON, OFF, True, 20001)
+    assert eng.data.last_stop_reason == "manual_off"
+    eng.flush_event(FLUSH_LONG, OFF, 20002)
+    eng.flush_event(FLUSH_LONG, ON, 20003)
+    eng.set_enabled(False, 20004)
+    assert eng.data.last_stop_reason == "disabled"

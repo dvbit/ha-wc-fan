@@ -61,6 +61,20 @@ FLUSH_PARAMS: Final = {
 P_MIN_TIME: Final = "min_time"  # P7
 P_MAX_TIME: Final = "max_time"  # P8
 
+# --- v1.2: maximum fan on-time ----------------------------------------------
+P_MAX_ON_TIME: Final = "max_on_time"  # minutes, safety limit of one session
+KEY_MAX_ON_ENABLED: Final = "max_on_enabled"  # switch: limit active
+KEY_MAX_ON_MANUAL: Final = "max_on_manual"  # switch: limit also in manual mode
+# Options exposed as switches (key -> default), restored across restarts.
+OPTION_SWITCHES: Final = {KEY_MAX_ON_ENABLED: True, KEY_MAX_ON_MANUAL: False}
+
+# v1.2: reason of the last fan switch-off (sensor attribute last_stop_reason).
+STOP_COUNTDOWN: Final = "countdown"
+STOP_MAX_ON: Final = "max_on_time"
+STOP_MANUAL_OFF: Final = "manual_off"
+STOP_DISABLED: Final = "disabled"
+STOP_REASONS: Final = (STOP_COUNTDOWN, STOP_MAX_ON, STOP_MANUAL_OFF, STOP_DISABLED)
+
 # --- §3 Other entity keys ---------------------------------------------------
 KEY_ENABLED: Final = "enabled"
 KEY_EXPECTED_END: Final = "expected_end"

@@ -79,6 +79,9 @@
       },
       "max_time": {
         "name": "Tempo massimo"
+      },
+      "max_on_time": {
+        "name": "Tempo massimo di accensione"
       }
     },
     "sensor": {
@@ -104,6 +107,18 @@
           },
           "post_ventilation": {
             "name": "Tempo di post-ventilazione"
+          },
+          "max_on_end": {
+            "name": "Spegnimento forzato"
+          },
+          "last_stop_reason": {
+            "name": "Motivo ultimo spegnimento",
+            "state": {
+              "countdown": "Fine countdown",
+              "max_on_time": "Tempo massimo raggiunto",
+              "manual_off": "Spento a mano",
+              "disabled": "Automazione disabilitata"
+            }
           }
         }
       },
@@ -114,6 +129,12 @@
     "switch": {
       "enabled": {
         "name": "Abilitato"
+      },
+      "max_on_enabled": {
+        "name": "Limite tempo massimo di accensione"
+      },
+      "max_on_manual": {
+        "name": "Tempo massimo di accensione in manuale"
       }
     }
   }

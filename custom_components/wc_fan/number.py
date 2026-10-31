@@ -71,8 +71,8 @@ class WcFanNumber(WcFanEntity, RestoreNumber):
         self._attr_native_max_value = spec.maximum
         self._attr_native_step = spec.step
         self._attr_native_unit_of_measurement = spec.unit
-        # Pure seconds are durations; s/s factors have no device class.
-        if spec.unit == "s":
+        # Seconds and minutes (v1.2) are durations; s/s factors have none.
+        if spec.unit in ("s", "min"):
             self._attr_device_class = NumberDeviceClass.DURATION
         self._attr_native_value = spec.default
 
