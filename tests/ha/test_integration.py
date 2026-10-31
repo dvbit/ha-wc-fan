@@ -174,8 +174,8 @@ async def test_param_change_and_reload_persistence(
     await _tick(hass, freezer, 5)
     hass.states.async_set(FLUSH, "off")
     await hass.async_block_till_done()
-    # T = 120 + 60 + 2 * 5 = 190
-    assert hass.states.get("sensor.bagno_state").attributes["post_ventilation"] == 190
+    # T = 120 + 60 (flush counted once, seat closed)
+    assert hass.states.get("sensor.bagno_state").attributes["post_ventilation"] == 180
 
     assert await hass.config_entries.async_reload(entry.entry_id)
     await hass.async_block_till_done()
@@ -236,9 +236,9 @@ async def test_seat_only_entities_and_session(
     await _setup(hass, {CONF_SEAT: SEAT, CONF_FAN: FAN})
     for key in (
         "flush_extra",
-        "flush_factor",
+        "flush_seat_factor",
         "short_flush_extra",
-        "short_flush_factor",
+        "short_flush_seat_factor",
     ):
         assert hass.states.get(f"number.bagno_{key}") is None
     hass.states.async_set(SEAT, "on")
@@ -264,8 +264,8 @@ async def test_short_and_long_flush(
     hass.states.async_set(SHORT, "off")
     await hass.async_block_till_done()
     attrs = hass.states.get("sensor.bagno_state").attributes
-    assert attrs["short_flush_durations"] == [3]
-    assert attrs["post_ventilation"] == 120 + 30 + 6
+    assert attrs["short_flush_count"] == 1
+    assert attrs["post_ventilation"] == 120 + 30
 
     hass.states.async_set(SHORT, "on")
     hass.states.async_set(FLUSH, "on")
@@ -275,8 +275,8 @@ async def test_short_and_long_flush(
     hass.states.async_set(FLUSH, "off")
     await hass.async_block_till_done()
     attrs = hass.states.get("sensor.bagno_state").attributes
-    assert attrs["flush_durations"] == [5]
-    assert attrs["short_flush_durations"] == [3]
+    assert attrs["flush_count"] == 1
+    assert attrs["short_flush_count"] == 1
 
 
 async def test_options_remove_flush_removes_numbers(hass: HomeAssistant) -> None:
@@ -457,3 +457,21 @@ async def test_timer_in_use_error(hass: HomeAssistant) -> None:
         },
     )
     assert result["errors"] == {CONF_TIMER: "timer_in_use"}
+
+
+async def test_v2_obsolete_duration_factors_removed(hass: HomeAssistant) -> None:
+    """v2.0: the v1.x duration factor entities are dropped from the registry."""
+    registry = er.async_get(hass)
+    entry = MockConfigEntry(domain=DOMAIN, title="Bagno", data=DATA)
+    entry.add_to_hass(hass)
+    for key in ("flush_factor", "short_flush_factor"):
+        registry.async_get_or_create(
+            "number", DOMAIN, f"{entry.entry_id}_{key}", suggested_object_id=key
+        )
+    hass.states.async_set(SEAT, "off")
+    hass.states.async_set(FAN, "off")
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert registry.async_get(f"number.{'flush_factor'}") is None
+    assert registry.async_get("number.short_flush_factor") is None
+    assert hass.states.get("number.bagno_flush_seat_factor") is not None

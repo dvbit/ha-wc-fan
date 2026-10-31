@@ -71,13 +71,13 @@
       "short_flush_extra": {
         "name": "Extra descarga corta"
       },
-      "short_flush_factor": {
+      "short_flush_seat_factor": {
         "name": "Factor descarga corta"
       },
       "flush_extra": {
         "name": "Extra descarga larga"
       },
-      "flush_factor": {
+      "flush_seat_factor": {
         "name": "Factor descarga larga"
       },
       "min_time": {
@@ -105,11 +105,11 @@
           "seat_total": {
             "name": "Tiempo tapa abierta"
           },
-          "flush_durations": {
-            "name": "Duraciones de descargas largas"
+          "flush_count": {
+            "name": "Descargas largas"
           },
-          "short_flush_durations": {
-            "name": "Duraciones de descargas cortas"
+          "short_flush_count": {
+            "name": "Descargas cortas"
           },
           "post_ventilation": {
             "name": "Tiempo de posventilación"

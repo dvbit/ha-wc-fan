@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.0.0 — 2026-10-31
+
+**Breaking: new formula.** A flush is now a binary event; its duration no longer
+matters. T = clamp(P2 + P3·S + n_short·(P5s + P6s·S) + n_long·(P5 + P6·S), P7, P8)
+with S = min(D_t, P4).
+
+- New numbers `flush_seat_factor` (0.3) and `short_flush_seat_factor` (0.15),
+  s per second of lid-open time, range 0–2. They replace `flush_factor` and
+  `short_flush_factor`; the old entities are removed and the new ones start at
+  their defaults. `flush_extra` / `short_flush_extra` keep their values.
+- State sensor attributes `flush_count` / `short_flush_count` replace the lists
+  of durations. Sessions persisted by v1.x are converted to counts.
+- README (EN/IT) examples and charts recomputed.
+
 ## 1.4.0 — 2026-10-31
 
 - New optional **timer helper** (`timer_entity`): the remaining fan time is

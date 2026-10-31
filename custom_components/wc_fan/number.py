@@ -15,7 +15,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import WcFanConfigEntry
-from .const import DOMAIN, FLUSH_PARAMS
+from .const import DOMAIN, FLUSH_PARAMS, OBSOLETE_NUMBER_KEYS
 from .engine import PARAM_SPECS
 from .entity import WcFanEntity
 from .manager import WcFanManager
@@ -42,14 +42,17 @@ async def async_setup_entry(
         for key in keys
     }
     registry = er.async_get(hass)
-    for key in skipped:
+    # v2.0: the v1.x duration factors no longer exist; drop their entities.
+    for key in (*skipped, *OBSOLETE_NUMBER_KEYS):
         unique_id = f"{entry.entry_id}_{key}"
         if entity_id := registry.async_get_entity_id(
             Platform.NUMBER, DOMAIN, unique_id
         ):
             registry.async_remove(entity_id)
             _LOGGER.info(
-                "[%s] %s removed (flush sensor not set)", manager.name, entity_id
+                "[%s] %s removed (obsolete or flush sensor not set)",
+                manager.name,
+                entity_id,
             )
     async_add_entities(
         WcFanNumber(manager, key) for key in PARAM_SPECS if key not in skipped

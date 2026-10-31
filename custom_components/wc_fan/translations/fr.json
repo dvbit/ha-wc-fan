@@ -71,13 +71,13 @@
       "short_flush_extra": {
         "name": "Supplément petite chasse"
       },
-      "short_flush_factor": {
+      "short_flush_seat_factor": {
         "name": "Facteur petite chasse"
       },
       "flush_extra": {
         "name": "Supplément grande chasse"
       },
-      "flush_factor": {
+      "flush_seat_factor": {
         "name": "Facteur grande chasse"
       },
       "min_time": {
@@ -105,11 +105,11 @@
           "seat_total": {
             "name": "Durée abattant ouvert"
           },
-          "flush_durations": {
-            "name": "Durées des grandes chasses"
+          "flush_count": {
+            "name": "Chasses longues"
           },
-          "short_flush_durations": {
-            "name": "Durées des petites chasses"
+          "short_flush_count": {
+            "name": "Chasses courtes"
           },
           "post_ventilation": {
             "name": "Durée de post-ventilation"

@@ -3,7 +3,7 @@
 # WC Fan
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/)
-![Version](https://img.shields.io/badge/version-1.4.0-blue)
+![Version](https://img.shields.io/badge/version-2.0.0-blue)
 
 🇮🇹 [Leggi in italiano](README.it.md)
 
@@ -21,15 +21,19 @@ Full specification: [SPEC.md](SPEC.md).
 3. When both are off, a **countdown** of length **T** starts:
 
    ```
-   T = clamp( P2 + P3 · min(D_t, P4)
-              + Σ_short (P5s + P6s · d_i) + Σ_long (P5 + P6 · d_i), P7, P8 )
+   S = min(D_t, P4)
+   T = clamp( P2 + P3 · S + n_short · (P5s + P6s · S) + n_long · (P5 + P6 · S), P7, P8 )
    ```
 
-   `D_t` = total lid-open time in the session, `d_i` = duration of each flush.
-   Example: lid open 300 s, a long flush of 6 s and a short one of 3 s →
-   120 + 150 + 72 + 36 = **378 s**.
+   `D_t` = total lid-open time in the session, `n_short` / `n_long` = number of
+   flushes. A flush is a **binary event**: its duration does not matter, it
+   counts once. Each flush adds a fixed part (P5 / P5s) plus a part
+   **proportional to the lid-open time** through a configurable factor
+   (P6 / P6s). A long flush weighs more than a short one, and more flushes mean
+   more ventilation. Example: lid open 300 s, one long and one short flush →
+   120 + 150 + (60 + 90) + (30 + 45) = **495 s**.
 
-   Without flush sensors the sums are empty: T = clamp(P2 + P3 · min(D_t, P4), P7, P8).
+   Without flush sensors there are no flush terms: T = clamp(P2 + P3 · S, P7, P8).
    With the defaults, 1 min of lid open → 150 s, 10 min → 420 s.
    If both flush contacts are on at the same time (dual-button plates) they
    count as **one long flush**, from the first `on` to the last `off`.
@@ -73,6 +77,8 @@ The parameters of a flush sensor that is not configured are not created.
 **Upgrading from 1.0:** the existing flush sensor becomes the **long** flush;
 entity IDs and values are kept.
 
+**Upgrading to 2.0:** the formula changed (a flush is a binary event, see *How it works*). The duration-factor numbers are replaced by `flush_seat_factor` / `short_flush_seat_factor` (defaults 0.3 / 0.15); `flush_extra` keeps its value.
+
 ## Entities
 
 Example with name `Bathroom`:
@@ -84,10 +90,10 @@ Example with name `Bathroom`:
 | `number.bathroom_base_time` | 120 s | 0–1800 | P2 |
 | `number.bathroom_seat_factor` | 0.5 s/s | 0–5 | P3 |
 | `number.bathroom_seat_cap` | 1200 s | 60–3600 | P4 |
-| `number.bathroom_short_flush_extra` | 30 s | 0–600 | P5s (short flush only) |
-| `number.bathroom_short_flush_factor` | 2 s/s | 0–10 | P6s (short flush only) |
-| `number.bathroom_flush_extra` | 60 s | 0–600 | P5 (long flush only) |
-| `number.bathroom_flush_factor` | 2 s/s | 0–10 | P6 (long flush only) |
+| `number.bathroom_short_flush_extra` | 30 s | 0–600 | P5s per short flush (short flush only) |
+| `number.bathroom_short_flush_seat_factor` | 0.15 s/s | 0–2 | P6s per short flush (short flush only) |
+| `number.bathroom_flush_extra` | 60 s | 0–600 | P5 per long flush (long flush only) |
+| `number.bathroom_flush_seat_factor` | 0.3 s/s | 0–2 | P6 per long flush (long flush only) |
 | `number.bathroom_min_time` | 120 s | 0–3600 | P7 |
 | `number.bathroom_max_time` | 1200 s | 60–7200 | P8 (countdown only) |
 | `number.bathroom_max_on_time` | 60 min | 5–240 | maximum on-time |
@@ -96,8 +102,8 @@ Example with name `Bathroom`:
 | `sensor.bathroom_state` | — | `idle`, `waiting`, `active`, `countdown`, `manual`, `disabled` | §5 |
 | `sensor.bathroom_expected_end` | — | timestamp, only in `countdown` | §3 |
 
-`sensor.bathroom_state` attributes: `seat_total` (D_t, s), `flush_durations`
-(long flushes, s), `short_flush_durations` (short flushes, s),
+`sensor.bathroom_state` attributes: `seat_total` (D_t, s), `flush_count`
+(long flushes), `short_flush_count` (short flushes),
 `post_ventilation` (T for the current session, s), `max_on_end` (forced
 switch-off instant), `last_stop_reason` (`countdown`, `max_on_time`,
 `manual_off`, `disabled`).
@@ -249,12 +255,13 @@ is logged once as a warning and skipped.
 ## Timer examples
 
 All values use the **defaults** (P1 10 s, P2 120 s, P3 0.5, P4 1200 s, P5s 30 s,
-P6s 2, P5 60 s, P6 2, P7 120 s, P8 1200 s, maximum on-time 60 min) and were
+P6s 0.15, P5 60 s, P6 0.3, P7 120 s, P8 1200 s, maximum on-time 60 min) and were
 computed with the integration's own state machine. `T` is how long the fan keeps
 running **after** the lid is closed and the last flush has ended.
 
 ```
-T = clamp( 120 + 0.5 · min(D_t, 1200) + Σ_short (30 + 2·d) + Σ_long (60 + 2·d), 120, 1200 )
+S = min(D_t, 1200)
+T = clamp( 120 + 0.5·S + n_short · (30 + 0.15·S) + n_long · (60 + 0.3·S), 120, 1200 )
 ```
 
 ### Different lid times and flushes
@@ -262,16 +269,25 @@ T = clamp( 120 + 0.5 · min(D_t, 1200) + Σ_short (30 + 2·d) + Σ_long (60 + 2�
 | # | Lid open (D_t) | Flushes | Calculation | T |
 | --- | --- | --- | --- | --- |
 | 1 | 30 s | none | 120 + 15 | **135 s** (2 min 15 s) |
-| 2 | 30 s | short 3 s | 120 + 15 + (30 + 6) | **171 s** (2 min 51 s) |
-| 3 | 2 min | long 6 s | 120 + 60 + (60 + 12) | **252 s** (4 min 12 s) |
-| 4 | 5 min | long 6 s + short 3 s | 120 + 150 + (60 + 12) + (30 + 6) | **378 s** (6 min 18 s) |
-| 5 | 10 min | 2 × long 6 s | 120 + 300 + 2 · (60 + 12) | **564 s** (9 min 24 s) |
-| 6 | 25 min | long 8 s | 120 + 600 *(D_t capped by P4)* + (60 + 16) | **796 s** (13 min 16 s) |
-| 7 | 30 min | 10 × long 8 s | 120 + 600 + 10 · (60 + 16) = 1480 → clamped by P8 | **1200 s** (20 min) |
+| 2 | 30 s | 1 short | 120 + 15 + (30 + 4.5) | **169.5 s** (2 min 50 s) |
+| 3 | 2 min | 1 long | 120 + 60 + (60 + 36) | **276 s** (4 min 36 s) |
+| 4 | 5 min | 1 long + 1 short | 120 + 150 + (60 + 90) + (30 + 45) | **495 s** (8 min 15 s) |
+| 5 | 10 min | 2 long | 120 + 300 + 2 · (60 + 180) | **900 s** (15 min) |
+| 6 | 25 min | 1 long | 120 + 600 *(S capped by P4)* + (60 + 360) | **1140 s** (19 min) |
+| 7 | 30 min | 10 long | 120 + 600 + 10 · (60 + 360) = 4920 → clamped by P8 | **1200 s** (20 min) |
 
-Without flush sensors only the first two terms count (rows 1, 3 and 5 would
-give 135 s, 180 s and 420 s). The fan switches on 10 s after the lid opens (P1),
-so in row 4 it runs for 5 min − 10 s + 6 min 18 s in total.
+### Same lid time (5 min), different number of flushes
+
+| Flushes | Calculation | T |
+| --- | --- | --- |
+| none | 120 + 150 | **270 s** (4 min 30 s) |
+| 1 short | 270 + (30 + 45) | **345 s** (5 min 45 s) |
+| 1 long | 270 + (60 + 90) | **420 s** (7 min) |
+| 2 long | 270 + 2 · 150 | **570 s** (9 min 30 s) |
+| 3 long | 270 + 3 · 150 | **720 s** (12 min) |
+
+The fan switches on 10 s after the lid opens (P1). Without flush sensors only
+the first two terms count (rows 1, 3 and 5 would give 135 s, 180 s and 420 s).
 
 ![T versus lid open time](docs/formula-curves.png)
 

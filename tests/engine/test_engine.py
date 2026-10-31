@@ -38,18 +38,20 @@ def make(**params: float) -> WcFanEngine:
 
 
 def test_formula_spec_example() -> None:
-    """§4 example: seat 300 s, flushes 6 s and 3 s -> 408 s."""
-    assert compute_post_ventilation(Params(), 300, [6, 3]) == pytest.approx(408)
+    """§4 (v2.0): seat 300 s and two long flushes -> 120 + 150 + 2 * (60 + 90)."""
+    assert compute_post_ventilation(Params(), 300, 2) == pytest.approx(570)
+    # The duration of a flush is irrelevant: only the count and the lid time.
+    assert compute_post_ventilation(Params(), 0, 1) == pytest.approx(120 + 60)
 
 
 def test_formula_clamps_and_inverted_bounds() -> None:
     """§4: clamp to [P7, P8]; P7 > P8 -> P8 on both sides; P4 caps D_t."""
-    assert compute_post_ventilation(Params(), 0, []) == 120
-    assert compute_post_ventilation(Params(), 100000, [500]) == 1200
-    assert compute_post_ventilation(Params(min_time=900, max_time=600), 0, []) == 600
+    assert compute_post_ventilation(Params(), 0, 0) == 120
+    assert compute_post_ventilation(Params(), 100000, 5) == 1200
+    assert compute_post_ventilation(Params(min_time=900, max_time=600), 0, 0) == 600
     # P4 = 1200 caps the seat contribution at 0.5 * 1200 = 600.
     p = Params(max_time=7200)
-    assert compute_post_ventilation(p, 5000, []) == 120 + 600
+    assert compute_post_ventilation(p, 5000, 0) == 120 + 600
 
 
 def test_full_session_seat_and_flush() -> None:
@@ -69,10 +71,10 @@ def test_full_session_seat_and_flush() -> None:
     assert eng.state == STATE_ACTIVE
     eng.flush_event(FLUSH_LONG, OFF, 313)
     assert eng.state == STATE_COUNTDOWN
-    assert eng.data.countdown_end == pytest.approx(313 + 408)
-    assert eng.countdown_expired(313 + 408) == [FAN_OFF]
+    assert eng.data.countdown_end == pytest.approx(313 + 570)  # 120+150+2*(60+90)
+    assert eng.countdown_expired(313 + 570) == [FAN_OFF]
     assert eng.state == STATE_IDLE
-    assert eng.data.seat_total == 0 and eng.data.flushes == []
+    assert eng.data.seat_total == 0 and eng.data.flush_count == 0
 
 
 def test_seat_closed_before_p1_is_discarded() -> None:
@@ -93,7 +95,7 @@ def test_flush_in_waiting_counts_current_opening() -> None:
     eng.flush_event(FLUSH_LONG, OFF, 8)
     eng.seat_event(OFF, 20)
     assert eng.data.seat_total == 20
-    assert eng.data.flushes == [4]
+    assert eng.data.flush_count == 1
 
 
 def test_flush_from_idle_and_zero_delay() -> None:
@@ -141,11 +143,11 @@ def test_params_change_during_countdown() -> None:
     """§5: end = countdown start + new T; past -> immediate OFF."""
     eng = make()
     eng.flush_event(FLUSH_LONG, ON, 0)
-    eng.flush_event(FLUSH_LONG, OFF, 5)  # T = 120 + 60 + 10 = 190
-    assert eng.data.countdown_end == 195
+    eng.flush_event(FLUSH_LONG, OFF, 5)  # T = 120 + 60 (seat 0) = 180
+    assert eng.data.countdown_end == 185
     eng.params.base_time = 300
     assert eng.params_changed(10) == []
-    assert eng.data.countdown_end == 5 + 370
+    assert eng.data.countdown_end == 5 + 360
     eng.params.max_time = 60
     eng.params.min_time = 0
     assert eng.params_changed(100) == [FAN_OFF]
@@ -158,7 +160,7 @@ def test_unavailable_sensor() -> None:
     eng.flush_event(FLUSH_LONG, ON, 0)
     eng.flush_event(FLUSH_LONG, NA, 7)
     assert eng.state == STATE_COUNTDOWN
-    assert eng.data.flushes == [7]  # duration counted up to unavailable
+    assert eng.data.flush_count == 1  # on -> unavailable ends (and counts) it
     eng.countdown_expired(10000)
     assert eng.flush_event(FLUSH_LONG, ON, 10001) == []  # na -> on: no trigger
     assert eng.state == STATE_IDLE
@@ -173,7 +175,7 @@ def test_unavailable_flush_duration_recorded() -> None:
     eng.p1_expired(10)
     eng.flush_event(FLUSH_LONG, ON, 20)
     eng.flush_event(FLUSH_LONG, NA, 26)
-    assert eng.data.flushes == [6]
+    assert eng.data.flush_count == 1
 
 
 def test_fan_reconciliation_after_unavailable() -> None:
@@ -195,7 +197,7 @@ def test_restart_scenarios() -> None:
     base = make()
     base.flush_event(FLUSH_LONG, ON, 0)
     base.flush_event(FLUSH_LONG, OFF, 5)
-    saved = base.as_dict()  # countdown, end 195
+    saved = base.as_dict()  # countdown, end 185
 
     eng = WcFanEngine("r", Params(), LOG)
     assert eng.start(saved, OFF, OFF, OFF, ON, True, 500) == [FAN_OFF]
@@ -203,7 +205,7 @@ def test_restart_scenarios() -> None:
 
     eng = WcFanEngine("r", Params(), LOG)
     assert eng.start(saved, OFF, OFF, OFF, ON, True, 100) == []
-    assert eng.state == STATE_COUNTDOWN and eng.data.countdown_end == 195
+    assert eng.state == STATE_COUNTDOWN and eng.data.countdown_end == 185
 
     active = make()
     active.seat_event(ON, 0)
@@ -238,9 +240,9 @@ def test_restart_scenarios() -> None:
 
 # ----------------------------------------------------------------- v1.1 tests
 def test_formula_short_and_long() -> None:
-    """v1.1: short (P5b=30, P6b=2) and long (P5=60, P6=2) contributions."""
-    t = compute_post_ventilation(Params(), 300, [6], [3])
-    assert t == pytest.approx(120 + 150 + 72 + 36)
+    """v2.0: short (30 + 0.15 S) and long (60 + 0.3 S) contributions, S = 300."""
+    t = compute_post_ventilation(Params(), 300, 1, 1)
+    assert t == pytest.approx(120 + 150 + (60 + 90) + (30 + 45))
 
 
 def test_no_flush_sensors_seat_only() -> None:
@@ -259,8 +261,8 @@ def test_short_flush_recorded_as_short() -> None:
     eng = make()
     assert eng.flush_event(FLUSH_SHORT, ON, 0) == [FAN_ON]
     eng.flush_event(FLUSH_SHORT, OFF, 4)
-    assert eng.data.short_flushes == [4] and eng.data.flushes == []
-    assert eng.data.countdown_end == pytest.approx(4 + 120 + 30 + 8)
+    assert eng.data.short_flush_count == 1 and eng.data.flush_count == 0
+    assert eng.data.countdown_end == pytest.approx(4 + 120 + 30)
 
 
 def test_overlap_counts_once_as_long() -> None:
@@ -271,7 +273,7 @@ def test_overlap_counts_once_as_long() -> None:
     eng.flush_event(FLUSH_SHORT, OFF, 3)
     assert eng.state == STATE_ACTIVE  # long still on
     eng.flush_event(FLUSH_LONG, OFF, 7)
-    assert eng.data.flushes == [7] and eng.data.short_flushes == []
+    assert eng.data.flush_count == 1 and eng.data.short_flush_count == 0
     assert eng.state == STATE_COUNTDOWN
 
 
@@ -282,7 +284,7 @@ def test_overlap_long_first_then_short() -> None:
     eng.flush_event(FLUSH_SHORT, ON, 1)
     eng.flush_event(FLUSH_LONG, OFF, 5)
     eng.flush_event(FLUSH_SHORT, OFF, 6)
-    assert eng.data.flushes == [6] and eng.data.short_flushes == []
+    assert eng.data.flush_count == 1 and eng.data.short_flush_count == 0
 
 
 def test_short_flush_restarts_countdown() -> None:
@@ -293,11 +295,11 @@ def test_short_flush_restarts_countdown() -> None:
     eng.flush_event(FLUSH_SHORT, ON, 20)
     assert eng.state == STATE_ACTIVE
     eng.flush_event(FLUSH_SHORT, OFF, 23)
-    assert eng.data.flushes == [5] and eng.data.short_flushes == [3]
+    assert eng.data.flush_count == 1 and eng.data.short_flush_count == 1
 
 
 def test_v10_store_compatible() -> None:
-    """v1.1: a v1.0 persisted session (no short keys) resumes correctly."""
+    """A v1.x persisted session (lists of durations) resumes as counts."""
     saved = {
         "state": "countdown",
         "seat_total": 0.0,
@@ -312,7 +314,8 @@ def test_v10_store_compatible() -> None:
     eng = WcFanEngine("old", Params(), LOG)
     eng.start(saved, OFF, NA, OFF, ON, True, 100)
     assert eng.state == STATE_COUNTDOWN
-    assert eng.data.short_flushes == [] and eng.post_ventilation() == 190
+    assert eng.data.flush_count == 1 and eng.data.short_flush_count == 0
+    assert eng.post_ventilation() == 180  # 120 + (60 + 0.3 * 0)
 
 
 # ----------------------------------------------------------------- v1.2 tests
@@ -400,3 +403,30 @@ def test_stop_reasons() -> None:
     eng.flush_event(FLUSH_LONG, ON, 20003)
     eng.set_enabled(False, 20004)
     assert eng.data.last_stop_reason == "disabled"
+
+
+# ----------------------------------------------------------------- v2.0 tests
+def test_flush_duration_is_irrelevant() -> None:
+    """v2.0: a flush is a binary event, its duration does not change T."""
+    ends = []
+    for lasted in (1, 30):
+        eng = make()
+        eng.seat_event(ON, 0)
+        eng.p1_expired(10)
+        eng.flush_event(FLUSH_LONG, ON, 20)
+        eng.flush_event(FLUSH_LONG, OFF, 20 + lasted)
+        eng.seat_event(OFF, 100)
+        ends.append(eng.data.countdown_end - 100)
+    # 120 + 0.5 * 100 + (60 + 0.3 * 100) = 260, in both cases.
+    assert ends == [pytest.approx(260), pytest.approx(260)]
+
+
+def test_more_and_bigger_flushes_ventilate_longer() -> None:
+    """v2.0: each flush adds time; a long one weighs more than a short one."""
+    p = Params()
+    one_short = compute_post_ventilation(p, 300, 0, 1)
+    one_long = compute_post_ventilation(p, 300, 1, 0)
+    two_short = compute_post_ventilation(p, 300, 0, 2)
+    assert one_short < one_long
+    assert one_short < two_short
+    assert compute_post_ventilation(p, 300, 0, 0) < one_short

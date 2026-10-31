@@ -16,13 +16,13 @@
       "short_flush_extra": {
         "default": "mdi:water-outline"
       },
-      "short_flush_factor": {
+      "short_flush_seat_factor": {
         "default": "mdi:water-percent-alert"
       },
       "flush_extra": {
         "default": "mdi:water-plus"
       },
-      "flush_factor": {
+      "flush_seat_factor": {
         "default": "mdi:water-percent"
       },
       "min_time": {

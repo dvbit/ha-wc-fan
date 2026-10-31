@@ -72,9 +72,9 @@ PARAM_SPECS: Final[dict[str, ParamSpec]] = {
     P_SEAT_FACTOR: ParamSpec(0.5, 0, 5, 0.1, "s/s"),  # P3
     P_SEAT_CAP: ParamSpec(1200, 60, 3600, 1, "s"),  # P4
     P_FLUSH_EXTRA: ParamSpec(60, 0, 600, 1, "s"),  # P5, long flush
-    P_FLUSH_FACTOR: ParamSpec(2, 0, 10, 0.1, "s/s"),  # P6, long flush
+    P_FLUSH_FACTOR: ParamSpec(0.3, 0, 2, 0.05, "s/s"),  # P6, per long flush (v2.0)
     P_SHORT_FLUSH_EXTRA: ParamSpec(30, 0, 600, 1, "s"),  # P5b, short (v1.1)
-    P_SHORT_FLUSH_FACTOR: ParamSpec(2, 0, 10, 0.1, "s/s"),  # P6b, short (v1.1)
+    P_SHORT_FLUSH_FACTOR: ParamSpec(0.15, 0, 2, 0.05, "s/s"),  # P6b, per short (v2.0)
     P_MIN_TIME: ParamSpec(120, 0, 3600, 1, "s"),  # P7
     P_MAX_TIME: ParamSpec(1200, 60, 7200, 1, "s"),  # P8
     P_MAX_ON_TIME: ParamSpec(60, 5, 240, 1, "min"),  # v1.2: max fan on-time
@@ -90,9 +90,9 @@ class Params:
     seat_factor: float = PARAM_SPECS[P_SEAT_FACTOR].default
     seat_cap: float = PARAM_SPECS[P_SEAT_CAP].default
     flush_extra: float = PARAM_SPECS[P_FLUSH_EXTRA].default
-    flush_factor: float = PARAM_SPECS[P_FLUSH_FACTOR].default
+    flush_seat_factor: float = PARAM_SPECS[P_FLUSH_FACTOR].default
     short_flush_extra: float = PARAM_SPECS[P_SHORT_FLUSH_EXTRA].default
-    short_flush_factor: float = PARAM_SPECS[P_SHORT_FLUSH_FACTOR].default
+    short_flush_seat_factor: float = PARAM_SPECS[P_SHORT_FLUSH_FACTOR].default
     min_time: float = PARAM_SPECS[P_MIN_TIME].default
     max_time: float = PARAM_SPECS[P_MAX_TIME].default
     # v1.2: maximum fan on-time (minutes) and its two switches.
@@ -104,24 +104,25 @@ class Params:
 def compute_post_ventilation(
     params: Params,
     seat_total: float,
-    flushes: list[float],
-    short_flushes: list[float] | None = None,
+    flushes: int,
+    short_flushes: int = 0,
 ) -> float:
-    """Return T in seconds (§4, extended in v1.1 with the short flush).
+    """Return T in seconds (§4; v2.0: flushes are binary events).
 
-    T = clamp(P2 + P3 * min(D_t, P4)
-              + sum_short(P5b + P6b * d_i) + sum_long(P5 + P6 * d_i), P7, P8)
-    If P7 > P8, P8 is used as both lower and upper bound.
-    Without flush sensors both sums are empty: T depends on the seat only.
+    With S = min(D_t, P4):
+    T = clamp(P2 + P3 * S + n_short * (P5b + P6b * S) + n_long * (P5 + P6 * S),
+              P7, P8)
+    A flush counts once whatever its duration; its weight grows with the lid
+    open time through the factors P6 / P6b. If P7 > P8, P8 is used as both
+    lower and upper bound. Without flushes T depends on the seat only.
     """
+    seat = min(seat_total, params.seat_cap)
     raw = (
         params.base_time
-        + params.seat_factor * min(seat_total, params.seat_cap)
-        + sum(params.flush_extra + params.flush_factor * d for d in flushes)
-        + sum(
-            params.short_flush_extra + params.short_flush_factor * d
-            for d in short_flushes or []
-        )
+        + params.seat_factor * seat
+        + flushes * (params.flush_extra + params.flush_seat_factor * seat)
+        + short_flushes
+        * (params.short_flush_extra + params.short_flush_seat_factor * seat)
     )
     upper = params.max_time
     lower = min(params.min_time, upper)  # §4: P7 > P8 -> P8 on both sides
@@ -134,8 +135,8 @@ class SessionData:
 
     state: str = STATE_IDLE
     seat_total: float = 0.0  # D_t, seconds
-    flushes: list[float] | None = None  # S long, d_i in seconds (v1.0 key)
-    short_flushes: list[float] | None = None  # S short, d_i in seconds (v1.1)
+    flush_count: int = 0  # n long flushes of the session (v2.0)
+    short_flush_count: int = 0  # n short flushes of the session (v2.0)
     seat_since: float | None = None  # start of the seat opening in progress
     flush_since: float | None = None  # start of the flush in progress (any kind)
     flush_long: bool = False  # v1.1: the flush in progress counts as long
@@ -146,18 +147,19 @@ class SessionData:
     on_since: float | None = None  # v1.2: fan switched on (session or manual)
     last_stop_reason: str | None = None  # v1.2: why the fan was last stopped
 
-    def __post_init__(self) -> None:
-        """Avoid shared mutable defaults for the flush lists."""
-        if self.flushes is None:
-            self.flushes = []
-        if self.short_flushes is None:
-            self.short_flushes = []
-
     @classmethod
     def from_dict(cls, data: dict[str, Any] | None) -> SessionData:
         """Build from persisted data, ignoring unknown or invalid keys."""
         if not data:
             return cls()
+        data = dict(data)
+        # v2.0: sessions persisted by v1.x hold lists of durations; keep the count.
+        for old, new in (
+            ("flushes", "flush_count"),
+            ("short_flushes", "short_flush_count"),
+        ):
+            if isinstance(data.get(old), list):
+                data.setdefault(new, len(data[old]))
         known = {f.name for f in fields(cls)}
         session = cls(**{k: v for k, v in data.items() if k in known})
         if session.state not in STATES:
@@ -196,8 +198,8 @@ class WcFanEngine:
         return compute_post_ventilation(
             self.params,
             self.data.seat_total,
-            self.data.flushes or [],
-            self.data.short_flushes or [],
+            self.data.flush_count,
+            self.data.short_flush_count,
         )
 
     @property
@@ -221,14 +223,14 @@ class WcFanEngine:
         old = self.data.state
         self.data.state = new_state
         self._log.debug(
-            "[%s] %s -> %s (cause: %s) D_t=%.1fs S_long=%s S_short=%s",
+            "[%s] %s -> %s (cause: %s) D_t=%.1fs n_long=%d n_short=%d",
             self.name,
             old,
             new_state,
             cause,
             self.data.seat_total,
-            [round(d, 1) for d in self.data.flushes or []],
-            [round(d, 1) for d in self.data.short_flushes or []],
+            self.data.flush_count,
+            self.data.short_flush_count,
         )
 
     def _open_session(self, now: float) -> None:
@@ -238,8 +240,8 @@ class WcFanEngine:
         is counted in D_t from its rising edge, delay included.
         """
         self.data.seat_total = 0.0
-        self.data.flushes = []
-        self.data.short_flushes = []
+        self.data.flush_count = 0
+        self.data.short_flush_count = 0
         self.data.p1_deadline = None
         self.data.on_since = now  # v1.2: start of the max on-time count
         self._log.info("[%s] session opened, fan ON", self.name)
@@ -247,8 +249,8 @@ class WcFanEngine:
     def _close_session(self) -> None:
         """§4: accumulators and timers are reset at the end of the session."""
         self.data.seat_total = 0.0
-        self.data.flushes = []
-        self.data.short_flushes = []
+        self.data.flush_count = 0
+        self.data.short_flush_count = 0
         self.data.seat_since = None
         self.data.flush_since = None
         self.data.flush_long = False
@@ -399,19 +401,20 @@ class WcFanEngine:
         return []
 
     def _record_flush(self, now: float) -> None:
-        """Append the finished flush to the list of its kind (§4, v1.1)."""
+        """Count the finished flush once, by kind (§4; v2.0: binary event)."""
         d = self.data
         if d.flush_since is not None:
-            duration = max(0.0, now - d.flush_since)
             if d.flush_long:
-                d.flushes = [*(d.flushes or []), duration]
+                d.flush_count += 1
             else:
-                d.short_flushes = [*(d.short_flushes or []), duration]
+                d.short_flush_count += 1
             self._log.debug(
-                "[%s] %s flush recorded: %.1fs",
+                "[%s] %s flush counted (n_long=%d n_short=%d, lasted %.1fs)",
                 self.name,
                 FLUSH_LONG if d.flush_long else FLUSH_SHORT,
-                duration,
+                d.flush_count,
+                d.short_flush_count,
+                max(0.0, now - d.flush_since),
             )
         d.flush_since = None
         d.flush_long = False

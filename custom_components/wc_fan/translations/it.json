@@ -71,13 +71,13 @@
       "short_flush_extra": {
         "name": "Extra scarico breve"
       },
-      "short_flush_factor": {
+      "short_flush_seat_factor": {
         "name": "Fattore scarico breve"
       },
       "flush_extra": {
         "name": "Extra scarico lungo"
       },
-      "flush_factor": {
+      "flush_seat_factor": {
         "name": "Fattore scarico lungo"
       },
       "min_time": {
@@ -105,11 +105,11 @@
           "seat_total": {
             "name": "Tempo tavoletta aperta"
           },
-          "flush_durations": {
-            "name": "Durate scarichi lunghi"
+          "flush_count": {
+            "name": "Scarichi lunghi"
           },
-          "short_flush_durations": {
-            "name": "Durate scarichi brevi"
+          "short_flush_count": {
+            "name": "Scarichi brevi"
           },
           "post_ventilation": {
             "name": "Tempo di post-ventilazione"

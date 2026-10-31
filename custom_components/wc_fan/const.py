@@ -51,9 +51,11 @@ P_BASE_TIME: Final = "base_time"  # P2
 P_SEAT_FACTOR: Final = "seat_factor"  # P3
 P_SEAT_CAP: Final = "seat_cap"  # P4
 P_FLUSH_EXTRA: Final = "flush_extra"  # P5, long flush
-P_FLUSH_FACTOR: Final = "flush_factor"  # P6, long flush
+P_FLUSH_FACTOR: Final = "flush_seat_factor"  # P6, long flush (v2.0)
 P_SHORT_FLUSH_EXTRA: Final = "short_flush_extra"  # P5b, short flush (v1.1)
-P_SHORT_FLUSH_FACTOR: Final = "short_flush_factor"  # P6b, short flush (v1.1)
+P_SHORT_FLUSH_FACTOR: Final = "short_flush_seat_factor"  # P6b, short (v2.0)
+# v2.0: keys of the v1.x duration factors, removed from the registry at setup.
+OBSOLETE_NUMBER_KEYS: Final = ("flush_factor", "short_flush_factor")
 
 # v1.1: parameters that exist only when the matching flush sensor is configured.
 FLUSH_PARAMS: Final = {

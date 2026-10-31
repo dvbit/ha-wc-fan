@@ -71,13 +71,13 @@
       "short_flush_extra": {
         "name": "Short flush extra"
       },
-      "short_flush_factor": {
+      "short_flush_seat_factor": {
         "name": "Short flush factor"
       },
       "flush_extra": {
         "name": "Long flush extra"
       },
-      "flush_factor": {
+      "flush_seat_factor": {
         "name": "Long flush factor"
       },
       "min_time": {
@@ -105,11 +105,11 @@
           "seat_total": {
             "name": "Seat open time"
           },
-          "flush_durations": {
-            "name": "Long flush durations"
+          "flush_count": {
+            "name": "Long flush count"
           },
-          "short_flush_durations": {
-            "name": "Short flush durations"
+          "short_flush_count": {
+            "name": "Short flush count"
           },
           "post_ventilation": {
             "name": "Post-ventilation time"

@@ -193,3 +193,26 @@ Livello debug: ogni transizione di stato con evento causa, D\_t, S, T calcolato.
 - Con limite disattivato e tavoletta aperta la fine non è nota: il timer parte
   all'inizio del countdown.
 - Helper non disponibile: warning una volta, nessun effetto sul funzionamento.
+
+---
+
+## Appendice — Requisito consolidato v2.0.0 (31/10/2026)
+
+- **Lo scarico è un evento binario**: la durata dell'impulso non conta, ogni
+  scarico vale una volta. Uno scarico lungo pesa più di uno breve; più scarichi
+  richiedono più aerazione.
+- **Formula** (sostituisce §4 / v1.1), con `S = min(D_t, P4)`:
+  `T = clamp( P2 + P3·S + n_brevi·(P5b + P6b·S) + n_lunghi·(P5 + P6·S), P7, P8 )`.
+- La quota aggiunta da ogni scarico è l'**extra fisso** (P5 lungo, P5b breve,
+  invariati: 60 s / 30 s) più una quota **proporzionale al tempo di tavoletta
+  aperta** tramite un fattore configurabile per tipo.
+- **Fattori** `flush_seat_factor` (P6, default 0.3) e `short_flush_seat_factor`
+  (P6b, default 0.15), unità s/s, range 0–2, step 0.05. Sostituiscono i fattori
+  di durata della v1.x (`flush_factor`, `short_flush_factor`), le cui entità
+  vengono rimosse dal registro; i nuovi partono dai default.
+- Sovrapposizione breve+lungo: ancora un solo scarico lungo; il conteggio
+  avviene alla fine dello scarico (anche per `on → unavailable`).
+- Attributi del sensore di stato: `flush_count` e `short_flush_count` al posto
+  delle liste di durate. Le sessioni persistite dalla v1.x vengono convertite
+  nel conteggio.
+- Esempio: tavoletta 300 s, un lungo e un breve → 120 + 150 + 150 + 75 = 495 s.

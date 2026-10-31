@@ -51,10 +51,8 @@ class WcFanStateSensor(WcFanEntity, SensorEntity):
         engine = self.manager.engine
         return {
             "seat_total": round(engine.data.seat_total, 1),
-            "flush_durations": [round(d, 1) for d in engine.data.flushes or []],
-            "short_flush_durations": [
-                round(d, 1) for d in engine.data.short_flushes or []
-            ],
+            "flush_count": engine.data.flush_count,
+            "short_flush_count": engine.data.short_flush_count,
             "post_ventilation": round(engine.post_ventilation(), 1),
             # v1.2: forced switch-off instant and reason of the last stop.
             "max_on_end": (

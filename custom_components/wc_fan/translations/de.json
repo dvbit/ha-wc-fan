@@ -71,13 +71,13 @@
       "short_flush_extra": {
         "name": "Zuschlag Kurzspülung"
       },
-      "short_flush_factor": {
+      "short_flush_seat_factor": {
         "name": "Faktor Kurzspülung"
       },
       "flush_extra": {
         "name": "Zuschlag Langspülung"
       },
-      "flush_factor": {
+      "flush_seat_factor": {
         "name": "Faktor Langspülung"
       },
       "min_time": {
@@ -105,11 +105,11 @@
           "seat_total": {
             "name": "Deckel-offen-Zeit"
           },
-          "flush_durations": {
-            "name": "Dauern der Langspülungen"
+          "flush_count": {
+            "name": "Lange Spülungen"
           },
-          "short_flush_durations": {
-            "name": "Dauern der Kurzspülungen"
+          "short_flush_count": {
+            "name": "Kurze Spülungen"
           },
           "post_ventilation": {
             "name": "Nachlaufzeit"
